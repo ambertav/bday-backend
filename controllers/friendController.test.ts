@@ -36,7 +36,7 @@ beforeAll(async () => {
         .send({
             email: "test@email.com",
             password: "123456Aa!",
-            firstName: "test",
+            name: "test",
             dob: "1990-08-08",
             gender: "female",
             lastName: "user"
@@ -50,7 +50,7 @@ beforeAll(async () => {
         .send({
             email: "testingt@email.com",
             password: "123456Aa!",
-            firstName: "test",
+            name: "test",
             lastName: "user",
             dob: "1990-08-08",
             gender: "female",

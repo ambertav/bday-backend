@@ -1,5 +1,6 @@
 export interface IUserDetails{
-    firstName?: string;
-    lastName?: string;
+    name?: string;
+    gender?: string;
+    dob?: Date;
     tel?: number;
 }
