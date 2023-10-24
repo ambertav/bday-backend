@@ -24,6 +24,7 @@ afterAll(async () => {
 });
 
 let token : string;
+let otherToken : string;
 
 describe('POST /api/friends/create', () => {
     it('should create a new friend', async () => {
@@ -109,5 +110,69 @@ describe ('GET /api/friends/', () => {
         // should return empty object if no friends
         expect(emptyResponse.statusCode).toBe(204);
         expect(emptyResponse.body).toEqual({});
+    });
+});
+
+
+
+describe('DELETE /api/friends/:id/delete', () => {
+    it('should delete a user\'s friend only if the friend belongs to user and is found', async () => {
+        const userResponse = await request(app)
+        .post('/api/users/')
+        .send({
+            email: "testingtest@email.com",
+            password: "123456Aa!",
+            firstName: "test",
+            lastName: "user"
+        });
+        
+        token = userResponse.body.accessToken;
+        const user = (jwt.decode(token) as JwtPayload);
+
+        const otherUserResponse = await request(app)
+        .post('/api/users/')
+        .send({
+            email: "testingt@email.com",
+            password: "123456Aa!",
+            firstName: "test",
+            lastName: "user"
+        });
+        
+        otherToken = otherUserResponse.body.accessToken;
+        const otherUser = (jwt.decode(otherToken) as JwtPayload);
+
+        const friendData = {
+            firstName: 'test',
+            lastName: 'test',
+            dob: '1997-01-26',
+            photo: 'string',
+            bio: 'a test user',
+            interests: ['testing', 'this is a test'],
+            tags: [],
+            user: user.payload
+        }
+
+        const friend = await Friend.create(friendData);
+
+        const response = await request(app)
+        .delete(`/api/friends/${friend._id}/delete`)
+        .set('Authorization', `Bearer ${otherToken}`);
+
+        expect(response.statusCode).toBe(403);
+
+        const response2 = await request(app)
+        .delete(`/api/friends/${friend._id}/delete`)
+        .set('Authorization', `Bearer ${token}`);
+
+        expect(response2.statusCode).toBe(204);
+
+        const deletedFriend = await Friend.findById(friend._id);
+        expect(deletedFriend).toBeNull();
+
+        const response3 = await request(app)
+        .delete(`/api/friends/${friend._id}/delete`)
+        .set('Authorization', `Bearer ${token}`);
+
+        expect(response3.statusCode).toBe(404);
     });
 });

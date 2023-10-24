@@ -32,10 +32,10 @@ export async function addFriend (req : Request & IExtReq, res : Response) {
 
         await newFriend.save();
 
-        if (newFriend) res.status(201).json(newFriend);
+        if (newFriend) return res.status(201).json(newFriend);
 
     } catch (error : any) {
-        res.status(400).json({
+        return res.status(500).json({
             error: error.message
         });
     }
@@ -44,11 +44,32 @@ export async function addFriend (req : Request & IExtReq, res : Response) {
 export async function findFriends (req : Request & IExtReq, res : Response) {
     try {
         const friends = await Friend.find({user: req.user});
-        if (friends.length > 0) res.status(200).json(friends);
-        else if (friends.length === 0) res.status(204).json('no friends');
+        if (friends.length > 0) return res.status(200).json(friends);
+        else if (friends.length === 0) return res.status(204).json('No friends found');
 
     } catch (error : any) {
-        res.status(400).json({
+        return res.status(500).json({
+            error: error.message
+        });
+    }
+}
+
+export async function deleteFriend (req : Request & IExtReq, res : Response) {
+    try {
+        const friendId = req.params.id;
+
+        const friend = await Friend.findById(friendId);
+        if (!friend) return res.status(404).json({ message: 'Friend not found' });
+    
+        if (friend?.user.toString() === req.user?.toString()) { // verifies that friend is associated with logged in user
+            const result = await Friend.findByIdAndDelete(friendId);
+            if (result) return res.status(204).json({ message: 'Friend deleted successfully' });
+        }
+
+        return res.status(403).json({ message: 'User not authorized for this request' });
+
+    } catch (error : any) {
+        return res.status(500).json({
             error: error.message
         });
     }
