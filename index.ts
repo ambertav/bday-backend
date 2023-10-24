@@ -6,6 +6,7 @@ import cors from 'cors';
 import sanitize from 'express-mongo-sanitize';
 import bearer from './middleware/bearer';
 import usersRoute from './routes/usersRoute';
+import connectDB from './utilities/db';
 
 const DEBUG = process.env.NODE_ENV ? process.env.NODE_ENV.toLocaleLowerCase() !== 'production' : true; // Fix DEBUG logic
 const PORT = process.env.PORT || 3000;
@@ -32,9 +33,10 @@ export const configureApp = (middleware?: any[]) => {
 
 const app = configureApp([bearer]);
 
-if (!process.env.NODE_ENV || (process.env.NODE_ENV && process.env.NODE_ENV !== 'test'))
+if (!process.env.NODE_ENV || (process.env.NODE_ENV && process.env.NODE_ENV !== 'test')) {
+    connectDB();
     app.listen(PORT, () => {
         console.log(`Express app running on port ${PORT}`);
     });
-
+}
 export default app;
