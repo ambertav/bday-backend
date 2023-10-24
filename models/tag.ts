@@ -16,4 +16,9 @@ const tagSchema = new mongoose.Schema({
     }
 });
 
-export default mongoose.model("Tag", tagSchema);
+export interface ITag extends mongoose.Document {
+    type: 'relationship' | 'gender' | 'aesthetics' | 'hobby' | 'custom';
+    title: string;
+}
+
+export default mongoose.model <ITag> ("Tag", tagSchema);
