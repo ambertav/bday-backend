@@ -75,7 +75,7 @@ export interface IFriendDocument extends mongoose.Document {
     bio: string;
     interests: string[];
     tags: mongoose.Types.ObjectId[],
-    user: mongoose.Types.ObjectId[],
+    user: mongoose.Types.ObjectId,
 }
 
 export default mongoose.model <IFriendDocument> ('Friend', friendSchema);
