@@ -63,3 +63,40 @@ describe('Friend DOB Validation', () => {
     });
 });
 
+describe('Friend deletion and cascade deletion of associated gifts', () => {
+    it('should delete a friend and cascade delete associated gifts', async () => {
+        expect.assertions(2);
+
+        // create friend to delete
+        const friend = await Friend.create({
+            firstName: 'test',
+            lastName: 'test',
+            dob: new Date(),
+            photo: 'test',
+        });
+
+        // create gifts
+        const giftOne = await Gift.create({
+            name: 'Gift 1',
+            friend: friend._id,
+        });
+        const giftTwo = await Gift.create({
+            name: 'Gift 2',
+            friend: friend._id,
+        });
+
+        // delete the friend
+        await friend.deleteOne();
+
+        // check if friend is deleted
+        const deletedFriend = await Friend.findById(friend);
+        expect(deletedFriend).toBeNull();
+
+        const deletedGiftOne = await Gift.findById(giftOne);
+        const deletedGiftTwo = await Gift.findById(giftTwo);
+
+        // check if gifts were deleted
+        expect(deletedGiftOne).toBeNull();
+        expect(deletedGiftTwo).toBeNull();
+    });
+});
