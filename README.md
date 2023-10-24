@@ -37,6 +37,7 @@ This document outlines the available API endpoints in our backend service. All r
 ### Update Password
 
 - **Endpoint**: `PUT /api/users/password`
+- **Authorization**: Bearer Token
 - **Request Body**: JSON object containing:
   - `oldPassword` (required)
   - `newPassword` (required)
@@ -44,6 +45,7 @@ This document outlines the available API endpoints in our backend service. All r
 ### Update User Information
 
 - **Endpoint**: `PUT /api/users`
+- **Authorization**: Bearer Token
 - **Request Body**: JSON object containing:
   - `firstName` (optional)
   - `lastName` (optional)
@@ -52,19 +54,19 @@ This document outlines the available API endpoints in our backend service. All r
 ### Delete User
 
 - **Endpoint**: `DELETE /api/users`
+- **Authorization**: Bearer Token
 - **Response**: JSON object containing:
   - `confirmationToken`
 
 ### Confirm User Deletion
 
 - **Endpoint**: `POST /api/confirm-delete`
+- **Authorization**: Bearer Token
 - **Request Body**: JSON object containing:
   - `confirmationToken` (required)
 - **Side Effect**: Deletes associated UserProfile
 
 ## User Profile
-## Protected Routes
-**Note**: All the routes below expect an `Authorization` header with a Bearer token.
 
 ### Update Profile Details
 
