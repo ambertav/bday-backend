@@ -26,10 +26,11 @@ afterAll(async () => {
 let token : string;
 let otherToken : string;
 
-describe('POST /api/friends/create', () => {
-    it('should create a new friend', async () => {
-        
-        const userResponse = await request(app)
+let user: JwtPayload;
+let otherUser: JwtPayload;
+
+beforeAll(async () => {
+    const userResponse = await request(app)
         .post('/api/users/')
         .send({
             email: "test@email.com",
@@ -37,10 +38,26 @@ describe('POST /api/friends/create', () => {
             firstName: "test",
             lastName: "user"
         });
-        
-        token = userResponse.body.accessToken;
-        const user = (jwt.decode(token) as JwtPayload);
 
+    token = userResponse.body.accessToken;
+    user = jwt.decode(token) as JwtPayload;
+
+    const otherUserResponse = await request(app)
+        .post('/api/users/')
+        .send({
+            email: "testingt@email.com",
+            password: "123456Aa!",
+            firstName: "test",
+            lastName: "user"
+        });
+
+    otherToken = otherUserResponse.body.accessToken;
+    otherUser = jwt.decode(otherToken) as JwtPayload;
+});
+
+describe('POST /api/friends/create', () => {
+    it('should create a new friend', async () => {
+    
         const requestBody = {
             firstName: 'test',
             lastName: 'test',
@@ -66,19 +83,45 @@ describe('POST /api/friends/create', () => {
 describe ('GET /api/friends/', () => {
     it('should retrieve all of the user\'s friends', async () => {
 
-        const userResponse = await request(app)
-        .post('/api/users/')
-        .send({
-            email: "testing@email.com",
-            password: "123456Aa!",
-            firstName: "test",
-            lastName: "user"
-        });
-        
-        token = userResponse.body.accessToken;
-        const user = (jwt.decode(token) as JwtPayload);
-
         const friendData = {
+            firstName: 'test',
+            lastName: 'test',
+            dob: '1997-01-26',
+            photo: 'string',
+            bio: 'a test user',
+            interests: ['testing', 'this is a test'],
+            tags: [],
+            user: otherUser.payload
+        }
+
+        // feeding friend data
+        const friend1 = await Friend.create(friendData);
+        const friend2 = await Friend.create(friendData);
+
+        const response = await request(app)
+            .get('/api/friends/')
+            .set('Authorization', `Bearer ${otherToken}`);
+
+        // should return all friends
+        expect(response.statusCode).toBe(200);
+        expect(response.body).toHaveLength(2);
+
+        await Friend.deleteMany({user: otherUser.payload});
+
+        const emptyResponse = await request(app)
+        .get('/api/friends/')
+        .set('Authorization', `Bearer ${otherToken}`);
+
+        // should return empty object if no friends
+        expect(emptyResponse.statusCode).toBe(204);
+        expect(emptyResponse.body).toEqual({});
+    });
+});
+
+describe('GET /api/friends/:id', () => {
+    it('should return a single friend associated with the user', async () => {
+
+        const requestBody = {
             firstName: 'test',
             lastName: 'test',
             dob: '1997-01-26',
@@ -89,57 +132,26 @@ describe ('GET /api/friends/', () => {
             user: user.payload
         }
 
-        // feeding friend data
-        const friend1 = await Friend.create(friendData);
-        const friend2 = await Friend.create(friendData);
+        const friend3 = await Friend.create(requestBody);
 
         const response = await request(app)
-            .get('/api/friends/')
-            .set('Authorization', `Bearer ${token}`);
-
-        // should return all friends
-        expect(response.statusCode).toBe(200);
-        expect(response.body).toHaveLength(2);
-
-        await Friend.deleteMany({user: user.payload});
-
-        const emptyResponse = await request(app)
-        .get('/api/friends/')
+        .get(`/api/friends/${friend3._id}`)
         .set('Authorization', `Bearer ${token}`);
 
-        // should return empty object if no friends
-        expect(emptyResponse.statusCode).toBe(204);
-        expect(emptyResponse.body).toEqual({});
+        expect(response.statusCode).toBe(200);
+
+        // if request is made by another user, the friend is not found
+        const response2 = await request(app)
+        .get(`/api/friends/${friend3._id}`)
+        .set('Authorization', `Bearer ${otherToken}`);
+
+        expect(response2.statusCode).toBe(404);
+
     });
 });
 
-
-
 describe('DELETE /api/friends/:id/delete', () => {
     it('should delete a user\'s friend only if the friend belongs to user and is found', async () => {
-        const userResponse = await request(app)
-        .post('/api/users/')
-        .send({
-            email: "testingtest@email.com",
-            password: "123456Aa!",
-            firstName: "test",
-            lastName: "user"
-        });
-        
-        token = userResponse.body.accessToken;
-        const user = (jwt.decode(token) as JwtPayload);
-
-        const otherUserResponse = await request(app)
-        .post('/api/users/')
-        .send({
-            email: "testingt@email.com",
-            password: "123456Aa!",
-            firstName: "test",
-            lastName: "user"
-        });
-        
-        otherToken = otherUserResponse.body.accessToken;
-        const otherUser = (jwt.decode(otherToken) as JwtPayload);
 
         const friendData = {
             firstName: 'test',
