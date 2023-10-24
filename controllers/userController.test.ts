@@ -6,6 +6,7 @@ import { configureApp } from '../index';
 import bearer from "../middleware/bearer";
 import { toSeconds } from "../utilities/utils";
 import userProfile from "../models/userProfile";
+import friend from "../models/friend";
 
 const app = configureApp([bearer]);
 
@@ -15,8 +16,9 @@ declare global {
 
 beforeAll(async () => {
     await mongoose.connect(global.__MONGO_URI__);
-    await User.deleteMany({});
+    await friend.deleteMany({});
     await userProfile.deleteMany({});
+    await User.deleteMany({});
 });
 
 afterAll(async () => {
@@ -42,7 +44,6 @@ describe('User Controller', () => {
                 gender: "male",
             })
             .expect(201);
-
     });
 
     // Test user login

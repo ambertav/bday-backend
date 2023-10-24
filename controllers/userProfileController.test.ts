@@ -9,6 +9,7 @@ import bearer from "../middleware/bearer";
 import { toSeconds } from "../utilities/utils";
 import userProfile from "../models/userProfile";
 import jwt, { JwtPayload } from "jsonwebtoken";
+import friend from "../models/friend";
 
 const app = configureApp([bearer]);
 
@@ -21,8 +22,9 @@ let token: string, userId: string;
 
 beforeAll(async () => {
     await mongoose.connect(global.__MONGO_URI__);
-    await User.deleteMany({});
+    await friend.deleteMany({});
     await userProfile.deleteMany({});
+    await User.deleteMany({});
     const res = await request(app)
         .post('/api/users')
         .send({
@@ -34,7 +36,7 @@ beforeAll(async () => {
             lastName: "user"
         });
     token = res.body.accessToken;
-    console.log(token);
+
     userId = (jwt.decode(token) as JwtPayload).payload;
 });
 

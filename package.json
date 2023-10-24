@@ -35,6 +35,6 @@
     "start": "nodemon",
     "watch": "nodemon --watch '**/*.ts' --exec 'tsc && node dist/index.js'",
     "build": "tsc",
-    "test": "jest --verbose"
+    "test": "jest --verbose --runInBand"
   }
 }

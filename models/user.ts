@@ -57,7 +57,6 @@ userSchema.pre("save", async function (next) {
             const error = new Error('Date of birth cannot be in the future');
             return next(error);
         }
-        next();
     }
 
     if (!this.isModified('passwordHash')) {
@@ -87,6 +86,8 @@ export interface IUserDocument extends mongoose.Document, IUserMethods {
     lastName: string;
     passwordHash: string;
     tel: number;
+    dob: Date;
+    gender: string;
 }
 
 export default mongoose.model<IUserDocument>("User", userSchema);

@@ -137,12 +137,12 @@ export async function confirmDeleteUser(req: Request & IExtReq, res: Response) {
 
 export async function signup(req: Request, res: Response) {
     try {
-        const { email, password, firstName, lastName, tel }: ISignupRequest = req.body;
+        const { email, password, firstName, lastName, tel, dob, gender }: ISignupRequest = req.body;
 
         const existingUser = await User.findOne({ email });
         if (existingUser) throw { status: 400, message: "Email already in use" };
 
-        const user: IUserDocument = new User({ email, passwordHash: password, firstName, lastName, tel });
+        const user: IUserDocument = new User({ email, passwordHash: password, firstName, lastName, tel, dob, gender });
 
         await user.save();
 
