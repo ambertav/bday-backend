@@ -34,7 +34,7 @@ describe("User Model", () => {
         expect(userJson?.passwordHash).toBeFalsy();
     });
 
-    it("should automatically create a profile when user is created", async()=>{
+    it("should automatically create a profile when user is created", async () => {
         const profiles = await userProfile.find({});
         expect(profiles.length).toBeGreaterThan(0);
     });

@@ -5,6 +5,7 @@ import * as userCtrl from './userController';
 import { configureApp } from '../index';
 import bearer from "../middleware/bearer";
 import { toSeconds } from "../utilities/utils";
+import userProfile from "../models/userProfile";
 
 const app = configureApp([bearer]);
 
@@ -149,5 +150,43 @@ describe('User Controller', () => {
                 firstName: "should not change"
             })
             .expect(401);
+    });
+
+    it("should delete associated user profiles on user deletion", async () => {
+        const res = await request(app)
+            //@ts-ignore
+            .post('/api/users')
+            .send({
+                email: "test@email.com",
+                password: "123456Aa!",
+                firstName: "first",
+                lastName: "last"
+            })
+            .expect(201);
+        token = res.body.accessToken;
+        // assert that user profile was created successfully
+        let profiles = await userProfile.find({});
+        expect(profiles.length).toBeGreaterThan(0);
+        // delete user
+        const deleteRes = await request(app)
+            //@ts-ignore
+            .delete('/api/users/')
+            .set('Authorization', `Bearer ${token}`)
+            .expect(200);
+        const confirmationToken = deleteRes.body.confirmationToken;
+        await request(app)
+            // @ts-ignore
+            .post("/api/users/confirm-delete")
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                confirmationToken
+            })
+            .expect(200);
+        // assert user was deleted
+        const users = await User.find({});
+        expect(users.length).toEqual(0);
+        // assert user profile was also deleted
+        profiles = await userProfile.find({});
+        expect(profiles.length).toEqual(0);
     });
 });

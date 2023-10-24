@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { CallbackError } from "mongoose";
 import { compareHash, hashString } from "../utilities/cryptoService";
 import userProfileSchema from "./userProfileSchema";
 
@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    tel:{
+    tel: {
         type: Number,
     }
 }, {
@@ -38,9 +38,9 @@ function validatePasswordPattern(val: string) {
 
 userSchema.pre("save", async function (next) {
     // Automatically create a new blank user profile when user is created
-    if(this.isNew){
+    if (this.isNew) {
         const Profile = mongoose.model("UserProfile", userProfileSchema);
-        await Profile.create({user: this._id});
+        await Profile.create({ user: this._id });
     }
 
     if (!this.isModified('passwordHash')) {
