@@ -8,6 +8,7 @@ import bearer from './middleware/bearer';
 import usersRoute from './routes/usersRoute';
 import friendsRoute from './routes/friendsRoute';
 import userProfileRoute from './routes/userProfileRoute';
+import tagsRoute from './routes/tagsRoute';
 import connectDB from './utilities/db';
 
 const DEBUG = process.env.NODE_ENV ? process.env.NODE_ENV.toLocaleLowerCase() !== 'production' : true; // Fix DEBUG logic
@@ -32,6 +33,8 @@ export const configureApp = (middleware?: any[]) => {
     app.use('/api/friends', friendsRoute);
 
     app.use('/api/users/profile', userProfileRoute);
+    app.use('/api/tags', tagsRoute);
+
     return app;
 }
 
