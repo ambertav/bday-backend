@@ -37,12 +37,6 @@ const friendSchema = new mongoose.Schema({
             ref: 'Tags'
         }
     ],
-    gifts: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'GiftRecommendations'
-        }
-    ],
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -61,6 +55,18 @@ friendSchema.pre('save', function (next) {
     next();
 });
 
+friendSchema.pre('deleteOne', async function (next) {
+    // removing all gift recommendation references on deletion of friend
+    const doc = await this.model.findOne(this.getFilter());
+    try {
+        await Gift.deleteMany({ friend: doc._id });
+        next();
+    } catch (error : any) {
+        console.error('Error deleting gift recommendations:', error);
+        next(error);
+    }
+});
+
 export interface IFriendDocument extends mongoose.Document {
     firstName: string;
     lastName: string;
@@ -69,7 +75,6 @@ export interface IFriendDocument extends mongoose.Document {
     bio: string;
     interests: string[];
     tags: mongoose.Types.ObjectId[],
-    gifts: mongoose.Types.ObjectId[],
     user: mongoose.Types.ObjectId[],
 }
 
