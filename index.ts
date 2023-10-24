@@ -1,5 +1,5 @@
 require('dotenv').config();
-const path = require('path');
+import path from 'path';
 import express from 'express';
 import morgan from 'morgan';
 import cors from 'cors';

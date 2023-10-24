@@ -34,7 +34,7 @@ const friendSchema = new mongoose.Schema({
     tags: [
         {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Tags'
+            ref: 'Tag'
         }
     ],
     user: {
