@@ -25,5 +25,7 @@ export interface ISignupRequest{
     password: string;
     firstName: string;
     lastName: string;
+    dob: Date;
+    gender: string;
     tel?: number;
 }

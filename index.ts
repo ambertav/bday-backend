@@ -11,7 +11,7 @@ import userProfileRoute from './routes/userProfileRoute';
 import connectDB from './utilities/db';
 
 const DEBUG = process.env.NODE_ENV ? process.env.NODE_ENV.toLocaleLowerCase() !== 'production' : true; // Fix DEBUG logic
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3010;
 
 export const configureApp = (middleware?: any[]) => {
 

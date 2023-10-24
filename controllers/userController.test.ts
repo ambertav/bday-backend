@@ -6,6 +6,7 @@ import { configureApp } from '../index';
 import bearer from "../middleware/bearer";
 import { toSeconds } from "../utilities/utils";
 import userProfile from "../models/userProfile";
+import friend from "../models/friend";
 
 const app = configureApp([bearer]);
 
@@ -15,8 +16,9 @@ declare global {
 
 beforeAll(async () => {
     await mongoose.connect(global.__MONGO_URI__);
-    await User.deleteMany({});
+    await friend.deleteMany({});
     await userProfile.deleteMany({});
+    await User.deleteMany({});
 });
 
 afterAll(async () => {
@@ -37,10 +39,11 @@ describe('User Controller', () => {
                 email: "test@email.com",
                 password: "123456Aa!",
                 firstName: "test",
-                lastName: "user"
+                lastName: "user",
+                dob: "1990-01-01",
+                gender: "male",
             })
             .expect(201);
-
     });
 
     // Test user login
@@ -161,7 +164,9 @@ describe('User Controller', () => {
                 email: "test@email.com",
                 password: "123456Aa!",
                 firstName: "first",
-                lastName: "last"
+                lastName: "last",
+                dob: "1990-01-01",
+                gender: "male",
             })
             .expect(201);
         token = res.body.accessToken;

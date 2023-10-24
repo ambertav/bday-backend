@@ -3,6 +3,8 @@
 ## Overview
 This document outlines the available API endpoints in our backend service. All routes return an HTTPError with relevant status and a json body containing `message` on error.
 
+Server runs on PORT 3010 by default.
+
 ---
 
 ## Authentication

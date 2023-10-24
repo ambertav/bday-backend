@@ -22,6 +22,8 @@ describe("User Model", () => {
             firstName: "test",
             lastName: "test",
             email: "test@test",
+            dob: "1990-01-01",
+            gender: "male",
             passwordHash: password,
         });
         expect(user.passwordHash).not.toEqual(password);

@@ -24,8 +24,8 @@ afterAll(async () => {
     await mongoose.connection.close();
 });
 
-let token : string;
-let otherToken : string;
+let token: string;
+let otherToken: string;
 
 let user: JwtPayload;
 let otherUser: JwtPayload;
@@ -37,6 +37,8 @@ beforeAll(async () => {
             email: "test@email.com",
             password: "123456Aa!",
             firstName: "test",
+            dob: "1990-08-08",
+            gender: "female",
             lastName: "user"
         });
 
@@ -49,7 +51,9 @@ beforeAll(async () => {
             email: "testingt@email.com",
             password: "123456Aa!",
             firstName: "test",
-            lastName: "user"
+            lastName: "user",
+            dob: "1990-08-08",
+            gender: "female",
         });
 
     otherToken = otherUserResponse.body.accessToken;
@@ -58,7 +62,7 @@ beforeAll(async () => {
 
 describe('POST /api/friends/create', () => {
     it('should create a new friend', async () => {
-    
+
         const requestBody = {
             firstName: 'test',
             lastName: 'test',
@@ -81,7 +85,7 @@ describe('POST /api/friends/create', () => {
 });
 
 
-describe ('GET /api/friends/', () => {
+describe('GET /api/friends/', () => {
     describe('GET /api/friends/', () => {
         it('should retrieve all of the user\'s friends', async () => {
             const friendData = {
@@ -94,33 +98,33 @@ describe ('GET /api/friends/', () => {
                 tags: [],
                 user: otherUser.payload
             }
-    
+
             // Create test friends
             const friend1 = await Friend.create(friendData);
             const friend2 = await Friend.create(friendData);
-    
+
             const response = await request(app)
                 .get('/api/friends/')
                 .set('Authorization', `Bearer ${otherToken}`);
-    
+
             // Should return all friends
             expect(response.statusCode).toBe(200);
             expect(response.body).toHaveLength(2);
-    
+
             // Clean up created friends
             await Friend.deleteMany({ user: otherUser.payload });
         });
-    
+
         it('should return an empty response if there are no friends', async () => {
             const emptyResponse = await request(app)
                 .get('/api/friends/')
                 .set('Authorization', `Bearer ${otherToken}`);
-    
+
             // Should return an empty response if no friends
             expect(emptyResponse.statusCode).toBe(204);
             expect(emptyResponse.body).toEqual({});
         });
-    });    
+    });
 });
 
 describe('GET /api/friends/:id', () => {
@@ -140,15 +144,15 @@ describe('GET /api/friends/:id', () => {
         const friend3 = await Friend.create(requestBody);
 
         const response = await request(app)
-        .get(`/api/friends/${friend3._id}`)
-        .set('Authorization', `Bearer ${token}`);
+            .get(`/api/friends/${friend3._id}`)
+            .set('Authorization', `Bearer ${token}`);
 
         expect(response.statusCode).toBe(200);
 
         // if request is made by another user, the friend is not found
         const response2 = await request(app)
-        .get(`/api/friends/${friend3._id}`)
-        .set('Authorization', `Bearer ${otherToken}`);
+            .get(`/api/friends/${friend3._id}`)
+            .set('Authorization', `Bearer ${otherToken}`);
 
         expect(response2.statusCode).toBe(404);
 
@@ -172,14 +176,14 @@ describe('DELETE /api/friends/:id/delete', () => {
         const friend = await Friend.create(friendData);
 
         const response = await request(app)
-        .delete(`/api/friends/${friend._id}/delete`)
-        .set('Authorization', `Bearer ${otherToken}`);
+            .delete(`/api/friends/${friend._id}/delete`)
+            .set('Authorization', `Bearer ${otherToken}`);
 
         expect(response.statusCode).toBe(403);
 
         const response2 = await request(app)
-        .delete(`/api/friends/${friend._id}/delete`)
-        .set('Authorization', `Bearer ${token}`);
+            .delete(`/api/friends/${friend._id}/delete`)
+            .set('Authorization', `Bearer ${token}`);
 
         expect(response2.statusCode).toBe(204);
 
@@ -187,8 +191,8 @@ describe('DELETE /api/friends/:id/delete', () => {
         expect(deletedFriend).toBeNull();
 
         const response3 = await request(app)
-        .delete(`/api/friends/${friend._id}/delete`)
-        .set('Authorization', `Bearer ${token}`);
+            .delete(`/api/friends/${friend._id}/delete`)
+            .set('Authorization', `Bearer ${token}`);
 
         expect(response3.statusCode).toBe(404);
     });
