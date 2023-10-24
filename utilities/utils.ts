@@ -1,3 +1,5 @@
+import { Response } from "express";
+
 export function toSeconds(timeString:string){
     const validUnits = ['s', 'm', 'h', 'd', 'w'];
     const unit = timeString.substring(timeString.length - 1);
@@ -23,4 +25,12 @@ export function toSeconds(timeString:string){
         case 'w':
             return num * 604800;
     }
+}
+
+
+
+export type HTTPError = { status: number, message: string };
+
+export function sendError(res: Response, { status, message }: HTTPError) {
+    res.status(status).json({ message });
 }
