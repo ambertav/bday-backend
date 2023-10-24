@@ -6,6 +6,7 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 
 import Friend from "../models/friend";
 import User from '../models/user';
+import Tag from '../models/tag';
 const app = configureApp([bearer]);
 
 
@@ -186,5 +187,76 @@ describe('DELETE /api/friends/:id/delete', () => {
         .set('Authorization', `Bearer ${token}`);
 
         expect(response3.statusCode).toBe(404);
+    });
+});
+
+
+describe('PUT /api/friends/:id/update', () => {
+    it('should update a user\'s friend', async () => {
+        const friendData = {
+            firstName: 'test',
+            lastName: 'test',
+            dob: '1997-01-26',
+            photo: 'string',
+            bio: 'a test user',
+            interests: ['testing', 'this is a test'],
+            tags: [],
+            user: user.payload
+        }
+
+        const testTag = await Tag.create({
+            type: "custom",
+            title: "Test Tag"
+        });
+
+        const updateString = {
+            ...friendData,
+            firstName: 'testing'
+        }
+
+        const updateInterests = {
+            ...friendData,
+            interests: ['just a test']
+        }
+
+        const updateTags = {
+            ...friendData,
+            tags: [testTag._id]
+        }
+
+        const friend = await Friend.create(friendData);
+
+        const stringResponse = await request(app)
+            .put(`/api/friends/${friend._id}/update`)
+            .send(updateString)
+            .set('Authorization', `Bearer ${token}`);
+
+        expect(stringResponse.statusCode).toBe(204);
+
+        const updatedFriend = await Friend.findById(friend._id);
+
+        expect(updatedFriend?.firstName).toEqual(updateString.firstName);
+
+        const interestsResponse = await request(app)
+            .put(`/api/friends/${friend._id}/update`)
+            .send(updateInterests)
+            .set('Authorization', `Bearer ${token}`);
+
+        expect(interestsResponse.statusCode).toBe(204);
+
+        const updatedInterestsFriend = await Friend.findById(friend._id);
+
+        expect(updatedInterestsFriend?.interests).toEqual(updateInterests.interests);
+
+        const tagsResponse = await request(app)
+            .put(`/api/friends/${friend._id}/update`)
+            .send(updateTags)
+            .set('Authorization', `Bearer ${token}`);
+
+        expect(tagsResponse.statusCode).toBe(204);
+
+        const updatedTagsFriend = await Friend.findById(friend._id);
+
+        expect(updatedTagsFriend?.tags).toEqual(updateTags.tags);
     });
 });

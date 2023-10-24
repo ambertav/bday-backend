@@ -90,3 +90,33 @@ export async function deleteFriend (req : Request & IExtReq, res : Response) {
     }
 }
 
+export async function updateFriend (req : Request & IExtReq, res : Response) {
+    try {
+        const friendId = req.params.id;
+
+        const friend = await Friend.findById(friendId);
+        if (!friend) return res.status(404).json({ message: 'Friend not found'});
+
+        if (friend?.user.toString() === req.user?.toString()) {
+            // Verify that friend is associated with the logged-in user
+            const { interests, tags, ...others } = req.body;
+
+            const updateFields = {
+                ...others,
+                interests,
+                tags
+            };
+
+            delete updateFields.user;
+            const result = await Friend.updateOne({ _id: friendId }, { $set: updateFields });
+            if (result) return res.status(204).json({ message: 'Friend updated' });
+        }
+
+        return res.status(403).json({ message: 'User not authorized for this request'});
+
+    } catch (error : any) {
+        return res.status(500).json({
+            error: error.message
+        });
+    }
+}
