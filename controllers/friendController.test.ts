@@ -35,10 +35,10 @@ describe('POST /api/friends/create', () => {
             password: "123456Aa!",
             firstName: "test",
             lastName: "user"
-        })
+        });
         
         token = userResponse.body.accessToken;
-        const user = (jwt.decode(token) as JwtPayload)
+        const user = (jwt.decode(token) as JwtPayload);
 
         const requestBody = {
             firstName: 'test',
@@ -58,5 +58,56 @@ describe('POST /api/friends/create', () => {
 
         expect(response.statusCode).toBe(201);
         expect(response.body).toHaveProperty('_id');
+    });
+});
+
+
+describe ('GET /api/friends/', () => {
+    it('should retrieve all of the user\'s friends', async () => {
+
+        const userResponse = await request(app)
+        .post('/api/users/')
+        .send({
+            email: "testing@email.com",
+            password: "123456Aa!",
+            firstName: "test",
+            lastName: "user"
+        });
+        
+        token = userResponse.body.accessToken;
+        const user = (jwt.decode(token) as JwtPayload);
+
+        const friendData = {
+            firstName: 'test',
+            lastName: 'test',
+            dob: '1997-01-26',
+            photo: 'string',
+            bio: 'a test user',
+            interests: ['testing', 'this is a test'],
+            tags: [],
+            user: user.payload
+        }
+
+        // feeding friend data
+        const friend1 = await Friend.create(friendData);
+        const friend2 = await Friend.create(friendData);
+
+        const response = await request(app)
+            .get('/api/friends/')
+            .set('Authorization', `Bearer ${token}`);
+
+        // should return all friends
+        expect(response.statusCode).toBe(200);
+        expect(response.body).toHaveLength(2);
+
+        await Friend.deleteMany({user: user.payload});
+
+        const emptyResponse = await request(app)
+        .get('/api/friends/')
+        .set('Authorization', `Bearer ${token}`);
+
+        // should return empty object if no friends
+        expect(emptyResponse.statusCode).toBe(204);
+        expect(emptyResponse.body).toEqual({});
     });
 });

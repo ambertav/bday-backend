@@ -40,3 +40,16 @@ export async function addFriend (req : Request & IExtReq, res : Response) {
         });
     }
 }
+
+export async function findFriends (req : Request & IExtReq, res : Response) {
+    try {
+        const friends = await Friend.find({user: req.user});
+        if (friends.length > 0) res.status(200).json(friends);
+        else if (friends.length === 0) res.status(204).json('no friends');
+
+    } catch (error : any) {
+        res.status(400).json({
+            error: error.message
+        });
+    }
+}
