@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { compareHash, hashString } from "../utilities/cryptoService";
+import userProfileSchema from "./userProfileSchema";
 
 const userSchema = new mongoose.Schema({
     email: {
@@ -36,6 +37,12 @@ function validatePasswordPattern(val: string) {
 }
 
 userSchema.pre("save", async function (next) {
+    // Automatically create a new blank user profile when user is created
+    if(this.isNew){
+        const Profile = mongoose.model("UserProfile", userProfileSchema);
+        await Profile.create({user: this._id});
+    }
+
     if (!this.isModified('passwordHash')) {
         return next();
     }
