@@ -16,7 +16,7 @@ afterAll(async () => {
 
 describe("User Model", () => {
     it("should correctly hash a password", async () => {
-        const password = "1234";
+        const password = "123456aA!";
         const user = await User.create({
             firstName: "test",
             lastName: "test",
