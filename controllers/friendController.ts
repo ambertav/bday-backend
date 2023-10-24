@@ -97,8 +97,7 @@ export async function updateFriend (req : Request & IExtReq, res : Response) {
         const friend = await Friend.findById(friendId);
         if (!friend) return res.status(404).json({ message: 'Friend not found'});
 
-        if (friend?.user.toString() === req.user?.toString()) {
-            // Verify that friend is associated with the logged-in user
+        if (friend?.user.toString() === req.user?.toString()) { // Verify that friend is associated with the logged in user
             const { interests, tags, ...others } = req.body;
 
             const updateFields = {
@@ -107,7 +106,7 @@ export async function updateFriend (req : Request & IExtReq, res : Response) {
                 tags
             };
 
-            delete updateFields.user;
+            delete updateFields.user; // so that it can't update the user
             const result = await Friend.updateOne({ _id: friendId }, { $set: updateFields });
             if (result) return res.status(204).json({ message: 'Friend updated' });
         }

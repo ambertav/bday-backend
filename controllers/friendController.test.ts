@@ -82,41 +82,45 @@ describe('POST /api/friends/create', () => {
 
 
 describe ('GET /api/friends/', () => {
-    it('should retrieve all of the user\'s friends', async () => {
-
-        const friendData = {
-            firstName: 'test',
-            lastName: 'test',
-            dob: '1997-01-26',
-            photo: 'string',
-            bio: 'a test user',
-            interests: ['testing', 'this is a test'],
-            tags: [],
-            user: otherUser.payload
-        }
-
-        // feeding friend data
-        const friend1 = await Friend.create(friendData);
-        const friend2 = await Friend.create(friendData);
-
-        const response = await request(app)
-            .get('/api/friends/')
-            .set('Authorization', `Bearer ${otherToken}`);
-
-        // should return all friends
-        expect(response.statusCode).toBe(200);
-        expect(response.body).toHaveLength(2);
-
-        await Friend.deleteMany({user: otherUser.payload});
-
-        const emptyResponse = await request(app)
-        .get('/api/friends/')
-        .set('Authorization', `Bearer ${otherToken}`);
-
-        // should return empty object if no friends
-        expect(emptyResponse.statusCode).toBe(204);
-        expect(emptyResponse.body).toEqual({});
-    });
+    describe('GET /api/friends/', () => {
+        it('should retrieve all of the user\'s friends', async () => {
+            const friendData = {
+                firstName: 'test',
+                lastName: 'test',
+                dob: '1997-01-26',
+                photo: 'string',
+                bio: 'a test user',
+                interests: ['testing', 'this is a test'],
+                tags: [],
+                user: otherUser.payload
+            }
+    
+            // Create test friends
+            const friend1 = await Friend.create(friendData);
+            const friend2 = await Friend.create(friendData);
+    
+            const response = await request(app)
+                .get('/api/friends/')
+                .set('Authorization', `Bearer ${otherToken}`);
+    
+            // Should return all friends
+            expect(response.statusCode).toBe(200);
+            expect(response.body).toHaveLength(2);
+    
+            // Clean up created friends
+            await Friend.deleteMany({ user: otherUser.payload });
+        });
+    
+        it('should return an empty response if there are no friends', async () => {
+            const emptyResponse = await request(app)
+                .get('/api/friends/')
+                .set('Authorization', `Bearer ${otherToken}`);
+    
+            // Should return an empty response if no friends
+            expect(emptyResponse.statusCode).toBe(204);
+            expect(emptyResponse.body).toEqual({});
+        });
+    });    
 });
 
 describe('GET /api/friends/:id', () => {
@@ -226,6 +230,7 @@ describe('PUT /api/friends/:id/update', () => {
 
         const friend = await Friend.create(friendData);
 
+        // tests if any string field on the friend object will be updated
         const stringResponse = await request(app)
             .put(`/api/friends/${friend._id}/update`)
             .send(updateString)
@@ -234,9 +239,9 @@ describe('PUT /api/friends/:id/update', () => {
         expect(stringResponse.statusCode).toBe(204);
 
         const updatedFriend = await Friend.findById(friend._id);
-
         expect(updatedFriend?.firstName).toEqual(updateString.firstName);
 
+        // tests if the interests array field will be updated
         const interestsResponse = await request(app)
             .put(`/api/friends/${friend._id}/update`)
             .send(updateInterests)
@@ -245,9 +250,9 @@ describe('PUT /api/friends/:id/update', () => {
         expect(interestsResponse.statusCode).toBe(204);
 
         const updatedInterestsFriend = await Friend.findById(friend._id);
-
         expect(updatedInterestsFriend?.interests).toEqual(updateInterests.interests);
 
+        // tests if the tag array of ObjectIds will be updated
         const tagsResponse = await request(app)
             .put(`/api/friends/${friend._id}/update`)
             .send(updateTags)
@@ -256,7 +261,6 @@ describe('PUT /api/friends/:id/update', () => {
         expect(tagsResponse.statusCode).toBe(204);
 
         const updatedTagsFriend = await Friend.findById(friend._id);
-
         expect(updatedTagsFriend?.tags).toEqual(updateTags.tags);
     });
 });
