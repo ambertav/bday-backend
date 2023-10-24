@@ -28,10 +28,13 @@ beforeAll(async () => {
         .send({
             email: "test@email.com",
             password: "123456Aa!",
+            dob: "1990-01-01",
+            gender: "male",
             firstName: "test",
             lastName: "user"
         });
     token = res.body.accessToken;
+    console.log(token);
     userId = (jwt.decode(token) as JwtPayload).payload;
 });
 

@@ -20,6 +20,15 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    dob: {
+        type: Date,
+        required: true,
+    },
+    gender: {
+        type: String,
+        enum: ["female", "male", "other"],
+        required: true,
+    },
     tel: {
         type: Number,
     }
@@ -41,6 +50,14 @@ userSchema.pre("save", async function (next) {
     if (this.isNew) {
         const Profile = mongoose.model("UserProfile", userProfileSchema);
         await Profile.create({ user: this._id });
+    }
+
+    if(this.isModified('dob')){
+        if (this.dob > new Date()) {
+            const error = new Error('Date of birth cannot be in the future');
+            return next(error);
+        }
+        next();
     }
 
     if (!this.isModified('passwordHash')) {

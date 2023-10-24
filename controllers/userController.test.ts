@@ -37,7 +37,9 @@ describe('User Controller', () => {
                 email: "test@email.com",
                 password: "123456Aa!",
                 firstName: "test",
-                lastName: "user"
+                lastName: "user",
+                dob: "1990-01-01",
+                gender: "male",
             })
             .expect(201);
 
@@ -161,7 +163,9 @@ describe('User Controller', () => {
                 email: "test@email.com",
                 password: "123456Aa!",
                 firstName: "first",
-                lastName: "last"
+                lastName: "last",
+                dob: "1990-01-01",
+                gender: "male",
             })
             .expect(201);
         token = res.body.accessToken;
