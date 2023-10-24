@@ -16,6 +16,7 @@ declare global {
 beforeAll(async () => {
     await mongoose.connect(global.__MONGO_URI__);
     await User.deleteMany({});
+    await userProfile.deleteMany({});
 });
 
 afterAll(async () => {
