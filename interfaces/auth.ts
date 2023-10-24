@@ -23,8 +23,7 @@ export interface IChangePasswordRequest{
 export interface ISignupRequest{
     email: string;
     password: string;
-    firstName: string;
-    lastName: string;
+    name: string;
     dob: Date;
     gender: string;
     tel?: number;

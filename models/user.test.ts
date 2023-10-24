@@ -19,8 +19,7 @@ describe("User Model", () => {
     it("should correctly hash a password", async () => {
         const password = "123456aA!";
         const user = await User.create({
-            firstName: "test",
-            lastName: "test",
+            name: "test",
             email: "test@test",
             dob: "1990-01-01",
             gender: "male",
@@ -30,7 +29,7 @@ describe("User Model", () => {
     });
 
     it("should not return password hash in JSON", async () => {
-        const user = await User.findOne({ firstName: "test" });
+        const user = await User.findOne({ name: "test" });
         expect(user).not.toBeNull();
         const userJson = user?.toJSON();
         expect(userJson?.passwordHash).toBeFalsy();

@@ -15,8 +15,9 @@ Server runs on PORT 3010 by default.
 - **Request Body**: JSON object containing:
   - `email` (required)
   - `password` (required)
-  - `firstName` (required)
-  - `lastName` (required)
+  - `name` (required)
+  - `dob` (required)
+  - `gender` (required)
   - `tel` (optional)
 - **Response**: JSON object containing:
   - `accessToken`

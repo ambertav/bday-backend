@@ -68,7 +68,7 @@ export async function updatePassword(req: Request & IExtReq, res: Response) {
 
 export async function updateUserDetails(req: Request & IExtReq, res: Response) {
     const details: Partial<IUserDetails> = req.body;
-    const allowedKeys: (keyof IUserDetails)[] = ['firstName', 'lastName', 'tel'];
+    const allowedKeys: (keyof IUserDetails)[] = ['name', 'dob', 'gender', 'tel'];
 
     try {
         const user = await User.findById(req.user);
@@ -137,12 +137,12 @@ export async function confirmDeleteUser(req: Request & IExtReq, res: Response) {
 
 export async function signup(req: Request, res: Response) {
     try {
-        const { email, password, firstName, lastName, tel, dob, gender }: ISignupRequest = req.body;
+        const { email, password, name, tel, dob, gender }: ISignupRequest = req.body;
 
         const existingUser = await User.findOne({ email });
         if (existingUser) throw { status: 400, message: "Email already in use" };
 
-        const user: IUserDocument = new User({ email, passwordHash: password, firstName, lastName, tel, dob, gender });
+        const user: IUserDocument = new User({ email, passwordHash: password, name, tel, dob, gender });
 
         await user.save();
 

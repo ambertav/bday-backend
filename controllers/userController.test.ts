@@ -38,8 +38,7 @@ describe('User Controller', () => {
             .send({
                 email: "test@email.com",
                 password: "123456Aa!",
-                firstName: "test",
-                lastName: "user",
+                name: "test",
                 dob: "1990-01-01",
                 gender: "male",
             })
@@ -66,11 +65,11 @@ describe('User Controller', () => {
             .put('/api/users/')
             .set('Authorization', `Bearer ${token}`)
             .send({
-                firstName: "new name"
+                name: "new name"
             })
             .expect(200);
         const user = await User.findOne({});
-        expect(user?.firstName).toEqual("new name");
+        expect(user?.name).toEqual("new name");
     });
 
     // Test updating password
@@ -151,7 +150,7 @@ describe('User Controller', () => {
             //@ts-ignore
             .put('/api/users/')
             .send({
-                firstName: "should not change"
+                name: "should not change"
             })
             .expect(401);
     });
@@ -163,8 +162,7 @@ describe('User Controller', () => {
             .send({
                 email: "test@email.com",
                 password: "123456Aa!",
-                firstName: "first",
-                lastName: "last",
+                name: "first",
                 dob: "1990-01-01",
                 gender: "male",
             })

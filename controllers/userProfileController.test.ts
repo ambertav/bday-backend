@@ -32,8 +32,7 @@ beforeAll(async () => {
             password: "123456Aa!",
             dob: "1990-01-01",
             gender: "male",
-            firstName: "test",
-            lastName: "user"
+            name: "test",
         });
     token = res.body.accessToken;
 

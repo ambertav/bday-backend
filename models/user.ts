@@ -8,11 +8,7 @@ const userSchema = new mongoose.Schema({
         required: true,
         unique: true,
     },
-    firstName: {
-        type: String,
-        required: true,
-    },
-    lastName: {
+    name: {
         type: String,
         required: true,
     },
@@ -82,8 +78,7 @@ export interface IUserMethods {
 
 export interface IUserDocument extends mongoose.Document, IUserMethods {
     email: string;
-    firstName: string;
-    lastName: string;
+    name: string;
     passwordHash: string;
     tel: number;
     dob: Date;
