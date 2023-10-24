@@ -48,10 +48,8 @@ export async function getUserProfile(req: Request & IExtReq, res: Response) {
 }
 
 export async function uploadUserPhoto(req: Request & IExtReq, res: Response) {
-    try {
-        console.log('starting upload fn')
+    try {       
         const s3Client = new S3Client({ region: AWS_REGION, credentials: { accessKeyId: AWS_ID!, secretAccessKey: AWS_SECRET! } });
-        console.log('intiated s3 client')
         const upload = multer({
             storage: multerS3({
                 s3: s3Client,
@@ -61,7 +59,6 @@ export async function uploadUserPhoto(req: Request & IExtReq, res: Response) {
                 }
             })
         }).single('photo');
-        console.log('multer upload intiated')
         upload(req, res, function (err) {
             if (err) {
                 throw { status: 500, message: err.message };
