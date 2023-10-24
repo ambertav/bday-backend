@@ -6,7 +6,7 @@ import cors from 'cors';
 import sanitize from 'express-mongo-sanitize';
 import bearer from './middleware/bearer';
 import usersRoute from './routes/usersRoute';
-
+import friendsRoute from './routes/friendsRoute';
 import userProfileRoute from './routes/userProfileRoute';
 import connectDB from './utilities/db';
 
@@ -29,7 +29,7 @@ export const configureApp = (middleware?: any[]) => {
     }
 
     app.use("/api/users", usersRoute);
-
+    app.use('/api/friends', friendsRoute);
 
     app.use('/api/users/profile', userProfileRoute);
     return app;
