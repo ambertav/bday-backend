@@ -4,15 +4,10 @@ import { IChangePasswordRequest, IExtReq, ILoginRequest, ISignupRequest } from "
 import User, { IUserDocument } from "../models/user";
 import { IUserDetails } from "../interfaces/user";
 import userProfile from "../models/userProfile";
+import { HTTPError, sendError } from "../utilities/utils";
 
 const { AUTH_JWT_SECRET, AUTH_JWT_EXPIRE, CONFIRM_DELETE_EXPIRE } = process.env;
 
-
-type HTTPError = { status: number, message: string };
-
-function sendError(res: Response, { status, message }: HTTPError) {
-    res.status(status).json({ message });
-}
 
 export async function loginLocal(req: Request, res: Response) {
     try {

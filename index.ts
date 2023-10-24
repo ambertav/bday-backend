@@ -6,6 +6,8 @@ import cors from 'cors';
 import sanitize from 'express-mongo-sanitize';
 import bearer from './middleware/bearer';
 import usersRoute from './routes/usersRoute';
+
+import userProfileRoute from './routes/userProfileRoute';
 import connectDB from './utilities/db';
 
 const DEBUG = process.env.NODE_ENV ? process.env.NODE_ENV.toLocaleLowerCase() !== 'production' : true; // Fix DEBUG logic
@@ -26,8 +28,10 @@ export const configureApp = (middleware?: any[]) => {
         app.use(middleware);
     }
 
-    app.use("/api/users/", usersRoute);
+    app.use("/api/users", usersRoute);
 
+
+    app.use('/api/users/profile', userProfileRoute);
     return app;
 }
 
