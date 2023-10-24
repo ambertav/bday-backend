@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import User from "./user";
+import userProfile from "./userProfile";
 
 declare global {
     var __MONGO_URI__: string;
@@ -31,6 +32,11 @@ describe("User Model", () => {
         expect(user).not.toBeNull();
         const userJson = user?.toJSON();
         expect(userJson?.passwordHash).toBeFalsy();
+    });
+
+    it("should automatically create a profile when user is created", async () => {
+        const profiles = await userProfile.find({});
+        expect(profiles.length).toBeGreaterThan(0);
     });
 
 });

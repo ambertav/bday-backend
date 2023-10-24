@@ -3,6 +3,7 @@ import jwt, { Secret } from 'jsonwebtoken';
 import { IChangePasswordRequest, IExtReq, ILoginRequest, ISignupRequest } from "../interfaces/auth";
 import User, { IUserDocument } from "../models/user";
 import { IUserDetails } from "../interfaces/user";
+import userProfile from "../models/userProfile";
 
 const { AUTH_JWT_SECRET, AUTH_JWT_EXPIRE, CONFIRM_DELETE_EXPIRE } = process.env;
 
@@ -127,6 +128,7 @@ export async function confirmDeleteUser(req: Request & IExtReq, res: Response) {
 
         await user.deleteOne();
         // TODO: Clean other records belonging to user, such as friends, profile, etc.
+        await userProfile.deleteMany({user: user._id});
 
         res.status(200).json({ message: "User deleted" });
     } catch (error: any) {
