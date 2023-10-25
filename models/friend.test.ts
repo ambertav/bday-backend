@@ -23,8 +23,7 @@ describe('Friend DOB Validation', () => {
         validDOB.setFullYear(now.getFullYear() - 100);
 
         const validFriend = await Friend.create({
-            firstName: 'test',
-            lastName: 'test',
+           name: 'test',
             dob: validDOB,
             photo: 'test'
         });
@@ -38,8 +37,7 @@ describe('Friend DOB Validation', () => {
 
        try {
             await Friend.create({
-                firstName: 'test',
-                lastName: 'test',
+                name: 'test',
                 dob: futureDOB,
                 photo: 'test',
             });
@@ -53,8 +51,7 @@ describe('Friend DOB Validation', () => {
 
     it('should allow a DOB that is equal to the current date', async () => {
         const newborn = await Friend.create({
-            firstName: 'test',
-            lastName: 'test',
+            name: 'test',
             dob: now,
             photo: 'test',
         });
@@ -63,40 +60,40 @@ describe('Friend DOB Validation', () => {
     });
 });
 
-describe('Friend deletion and cascade deletion of associated gifts', () => {
-    it('should delete a friend and cascade delete associated gifts', async () => {
-        expect.assertions(2);
+// // will handle in the controller
+// describe('Friend deletion and cascade deletion of associated gifts', () => {
+//     it('should delete a friend and cascade delete associated gifts', async () => {
+//         expect.assertions(2);
 
-        // create friend to delete
-        const friend = await Friend.create({
-            firstName: 'test',
-            lastName: 'test',
-            dob: new Date(),
-            photo: 'test',
-        });
+//         // create friend to delete
+//         const friend = await Friend.create({
+//             name: 'test',
+//             dob: new Date(),
+//             photo: 'test',
+//         });
 
-        // create gifts
-        const giftOne = await Gift.create({
-            name: 'Gift 1',
-            friend: friend._id,
-        });
-        const giftTwo = await Gift.create({
-            name: 'Gift 2',
-            friend: friend._id,
-        });
+//         // create gifts
+//         const giftOne = await Gift.create({
+//             name: 'Gift 1',
+//             friend: friend._id,
+//         });
+//         const giftTwo = await Gift.create({
+//             name: 'Gift 2',
+//             friend: friend._id,
+//         });
 
-        // delete the friend
-        await friend.deleteOne();
+//         // delete the friend
+//         await friend.deleteOne();
 
-        // check if friend is deleted
-        const deletedFriend = await Friend.findById(friend);
-        expect(deletedFriend).toBeNull();
+//         // check if friend is deleted
+//         const deletedFriend = await Friend.findById(friend);
+//         expect(deletedFriend).toBeNull();
 
-        const deletedGiftOne = await Gift.findById(giftOne);
-        const deletedGiftTwo = await Gift.findById(giftTwo);
+//         const deletedGiftOne = await Gift.findById(giftOne);
+//         const deletedGiftTwo = await Gift.findById(giftTwo);
 
-        // check if gifts were deleted
-        expect(deletedGiftOne).toBeNull();
-        expect(deletedGiftTwo).toBeNull();
-    });
-});
+//         // check if gifts were deleted
+//         expect(deletedGiftOne).toBeNull();
+//         expect(deletedGiftTwo).toBeNull();
+//     });
+// });

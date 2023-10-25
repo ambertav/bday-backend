@@ -5,8 +5,8 @@ import { IExtReq } from '../interfaces/auth';
 
 
 interface IFriendRequest {
-    firstName: string;
-    lastName: string;
+    name: string;
+    location: string;
     dob: Date;
     photo: string;
     bio: string;
@@ -17,11 +17,11 @@ interface IFriendRequest {
 
 export async function addFriend (req : Request & IExtReq, res : Response) {
     try {
-        const { firstName, lastName, dob, photo, bio, interests, tags } : IFriendRequest = req.body;
+        const { name, location, dob, photo, bio, interests, tags } : IFriendRequest = req.body;
 
         const newFriend : IFriendDocument = new Friend({
-            firstName,
-            lastName,
+            name,
+            location,
             dob,
             photo,
             bio,
