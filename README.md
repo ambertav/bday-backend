@@ -98,5 +98,108 @@ Server runs on PORT 3010 by default.
   - `photo` (required, File)
 - **Response**: JSON object containing:
   - `message: "Photo uploaded successfully"`
+  - `photoUrl`
 
 Note: The photo upload utilizes AWS S3 for storage.
+
+## Friends
+
+### Get All Friends
+
+- **Endpoint**: `GET /api/friends`
+- **Authorization**: Bearer Token
+- **Response**: JSON object containing:
+  - `friend[]`
+
+### Add Friend
+- **Endpoint**: `POST /api/friends`
+- **Authorization**: Bearer Token
+- **Request Body**: JSON object containing:
+  - `name` (required, string)
+  - `dob` (required, Date - yyyy-mm-dd)
+  - `location` (optional, string)
+  - `bio` (optional, string)
+  - `interests` (optional, string[])
+  - `tags` (optional, string[] - objectIds)
+  - `giftPreferences` (optional, string[])
+- **Response**: JSON object containing:
+  - `newFriend`
+
+### Upload Friend Photo
+- **Endpoint**: `POST /api/friends/:id/upload`
+- **Authorization**: Bearer Token
+- **Request Body**: Form-data containing:
+  - `photo` (required, File)
+- **Response**: JSON object containing:
+  - `message: "Photo uploaded successfully"`
+  - `photoUrl`
+
+### Show Friend
+- **Endpoint**: `POST /api/friends/:id`
+- **Authorization**: Bearer Token
+- **Response**: JSON object containing:
+  - `friend`
+
+### Delete Friend
+- **Endpoint**: `DELETE /api/friends/:id`
+- **Authorization**: Bearer Token
+- **Response**: JSON object containing:
+  -  `message: 'Friend deleted successfully'`
+
+### Update Friend
+- **Endpoint**: `PUT /api/friends/:id/update`
+- **Authorization**: Bearer Token
+- **Request Body**: JSON object containing:
+  - `name` (optional, string)
+  - `dob` (optional, Date - yyyy-mm-dd)
+  - `location` (optional, string)
+  - `bio` (optional, string)
+  - `interests` (optional, string[])
+  - `tags` (optional, string[] - objectIds)
+  - `giftPreferences` (optional, string[])
+- **Response**: JSON object containing:
+  -  `message: 'Friend updated'`
+
+Note: tags and giftPreferences are not checked for duplicate entries at this endpoint.
+
+### Add A Tag
+- **Endpoint**: `POST /api/friends/:id/tags`
+- **Authorization**: Bearer Token
+- **Request Body**: JSON object containing:
+  - `title` (required, string - title of tag)
+  - `type` (optional, string - category of tag)
+- **Response**: JSON object containing:
+  - `_id` (objectId of added tag)
+
+Note: A new tag is created if title-type combinatino does not exist. If friend already has this combination, the existing tag's objectId is returned.
+
+### Remove A Tag
+- **Endpoint**: `DELETE /api/friends/:id/tags/:tagId`
+- **Authorization**: Bearer Token
+- **Response**: JSON object containing:
+  - `message: "Tag removed"`
+
+Note: tagId must be a valid, existing tag's Id. If the friend's tags array does not contain the provided valid tag Id, HTTP 204 is returned with empty response body.
+
+### Add A Gift Preference
+- **Endpoint**: `POST /api/friends/:id/preferences`
+- **Authorization**: Bearer Token
+- **Request Body**: JSON object containing:
+  - `preference` (required, string - must be known to the backend. Currently "present" and "experience" are accepted)
+- **Response**: JSON object containing:
+  - `friend`
+
+### Remove A Gift Preference
+- **Endpoint**: `POST /api/friends/:id/preferences/remove`
+- **Authorization**: Bearer Token
+- **Request Body**: JSON object containing:
+  - `preference` (required, string - must be known to the backend. Currently "present" and "experience" are accepted)
+- **Response**: JSON object containing:
+  - `friend`
+
+## Tags
+
+### Get All Tags
+- **Endpoint**: `GET /api/tags`
+- **Response**: JSON object containing:
+  - `tag[]`

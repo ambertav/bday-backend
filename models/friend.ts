@@ -20,8 +20,7 @@ const friendSchema = new mongoose.Schema({
     },
     photo: {
         type: String,
-        required: true,
-        default: 'some url'
+        required: false,
     },
     bio: {
         type: String,
@@ -40,6 +39,7 @@ const friendSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
+        required: true,
     },
     giftPreferences: {
         type: [String],

@@ -13,6 +13,7 @@ router.post('/:id/tags', requireLogin, friendCtrl.addTag);
 router.delete('/:id/tags/:tagId', requireLogin, friendCtrl.removeTag);
 router.post('/:id/preferences', requireLogin, friendCtrl.addPreference);
 router.post('/:id/preferences/remove', requireLogin, friendCtrl.removePreference);
+router.post('/:id/upload', requireLogin, friendCtrl.uploadFriendPhoto);
 
 
 export default router;
