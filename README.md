@@ -1,5 +1,12 @@
 # Backend API Documentation
 
+## Getting Started
+Run `npm i` to install dependencies
+
+Setup a .env file according to the .env.sample file
+
+Run `npm start` to start development server
+
 ## Overview
 This document outlines the available API endpoints in our backend service. All routes return an HTTPError with relevant status and a json body containing `message` on error.
 
@@ -112,7 +119,7 @@ Note: The photo upload utilizes AWS S3 for storage.
   - `friend[]`
 
 ### Add Friend
-- **Endpoint**: `POST /api/friends`
+- **Endpoint**: `POST /api/friends/create`
 - **Authorization**: Bearer Token
 - **Request Body**: JSON object containing:
   - `name` (required, string)
@@ -142,7 +149,7 @@ Note: The photo upload utilizes AWS S3 for storage.
   - `friend`
 
 ### Delete Friend
-- **Endpoint**: `DELETE /api/friends/:id`
+- **Endpoint**: `DELETE /api/friends/:id/delete`
 - **Authorization**: Bearer Token
 - **Response**: JSON object containing:
   -  `message: 'Friend deleted successfully'`
@@ -209,6 +216,29 @@ Note: tagId must be a valid, existing tag's Id. If the friend's tags array does 
 - **Response**: JSON object containing:
   - `recommendations`
   - `message: 'Gift recommendations generated'`
+
+### Favorite a Gift Recommendation
+- **Endpoint**: `POST /api/friends/:id/favorites`
+- **Authorization**: Bearer Token
+- **Request Body**: JSON object containing:
+  - `title` (required, string)
+  - `reason` (required, string)
+  - `imgSrc` (required, string - link of thumbnail image)
+  - `imageSearchQuery` (required, string - query used to find thumbnail image)
+**Response**: JSON object containing:
+  - `recommendation` (with ObjectId)
+
+### List All Favorite Gift Recommendations
+- **Endpoint**: `GET /api/friends/:id/favorites`
+- **Authorization**: Bearer Token
+**Response**: JSON object containing:
+  - `favorites`
+
+### Delete a Favorite Gift Recommendation
+- **Endpoint**: `DELETE /api/friends/:id/favorites/:favoriteId`
+- **Authorization**: Bearer Token
+**Response**: JSON object containing:
+  - `message: "Favorite gift removed"`
 
 ## Tags
 
