@@ -12,7 +12,7 @@ const { AWS_REGION, AWS_SECRET, AWS_S3_BUCKET, AWS_ID } = process.env!;
 export async function updateProfileDetails(req: Request & IExtReq, res: Response) {
     try {
         const details: Partial<IUserProfileDetails> = req.body;
-        const allowedKeys: (keyof IUserProfileDetails)[] = ['dob', 'bio'];
+        const allowedKeys: (keyof IUserProfileDetails)[] = ['interests', 'bio'];
         const profile = await UserProfile.findOne({ user: req.user });
         if (!profile) throw { status: 404, message: "Profile not found" };
 

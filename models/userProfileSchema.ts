@@ -10,9 +10,6 @@ const userProfileSchema = new mongoose.Schema({
     photo: {
         type: String,
     },
-    dob: {
-        type: Date,
-    },
     interests: [String],
     user: {
         type: mongoose.Schema.Types.ObjectId,
