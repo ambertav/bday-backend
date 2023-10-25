@@ -70,7 +70,8 @@ describe('POST /api/friends/create', () => {
             bio: 'a test user',
             interests: ['testing', 'this is a test'],
             tags: [],
-            user: user.payload
+            user: user.payload,
+            gender: 'female'
         }
 
         const response = await request(app)
@@ -94,7 +95,8 @@ describe('GET /api/friends/', () => {
                 bio: 'a test user',
                 interests: ['testing', 'this is a test'],
                 tags: [],
-                user: otherUser.payload
+                user: otherUser.payload,
+                gender: 'female'
             }
 
             // Create test friends
@@ -135,7 +137,8 @@ describe('GET /api/friends/:id', () => {
             bio: 'a test user',
             interests: ['testing', 'this is a test'],
             tags: [],
-            user: user.payload
+            user: user.payload,
+            gender: 'female'
         }
 
         const friend3 = await Friend.create(requestBody);
@@ -166,7 +169,8 @@ describe('DELETE /api/friends/:id/delete', () => {
             bio: 'a test user',
             interests: ['testing', 'this is a test'],
             tags: [],
-            user: user.payload
+            user: user.payload,
+            gender: 'female'
         }
 
         const friend = await Friend.create(friendData);
@@ -204,7 +208,8 @@ describe('PUT /api/friends/:id/update', () => {
             bio: 'a test user',
             interests: ['testing', 'this is a test'],
             tags: [],
-            user: user.payload
+            user: user.payload,
+            gender: 'female'
         }
 
         const testTag = await Tag.create({
@@ -273,7 +278,8 @@ describe("POST /api/friends/:id/tags", () => {
             bio: 'a test user',
             interests: ['testing', 'this is a test'],
             tags: [],
-            user: user.payload
+            user: user.payload,
+            gender: 'female'
         }
         const friend = await Friend.create(friendData);
         const friendId = friend._id.toString();
@@ -299,7 +305,8 @@ describe("POST /api/friends/:id/tags", () => {
             bio: 'a test user',
             interests: ['testing', 'this is a test'],
             tags: [],
-            user: user.payload
+            user: user.payload,
+            gender: 'female'
         }
         const friend = await Friend.create(friendData);
         const friendId = friend._id.toString();
@@ -369,7 +376,8 @@ describe("DELETE /api/friends/:id/tags/:tagId", () => {
             bio: 'a test user',
             interests: ['testing', 'this is a test'],
             tags: [],
-            user: otherUser.payload
+            user: otherUser.payload,
+            gender: 'female'
         };
         const otherFriend = await Friend.create(otherFriendData);
 
@@ -393,6 +401,7 @@ describe("POST /api/friends/:id/preferences", () => {
             photo: 'string',
             bio: 'a test user',
             user: user.payload,
+            gender: 'female',
         });
         const response = await request(app)
             .post(`/api/friends/${friend._id}/preferences`)
@@ -411,6 +420,7 @@ describe("POST /api/friends/:id/preferences", () => {
             photo: 'string',
             bio: 'a test user',
             user: user.payload,
+            gender: 'female',
         });
         const response = await request(app)
             .post(`/api/friends/${friend._id}/preferences`)
@@ -431,6 +441,7 @@ describe("POST /api/friends/:id/preferences/remove", () => {
             bio: 'a test user',
             giftPreferences: ["present", "experience"],
             user: user.payload,
+            gender: 'female',
         });
         const response = await request(app)
             .post(`/api/friends/${friend._id}/preferences/remove`)
@@ -450,6 +461,7 @@ describe("POST /api/friends/:id/preferences/remove", () => {
             bio: 'a test user',
             giftPreferences: ["experience"],
             user: user.payload,
+            gender: 'female',
         });
         const response = await request(app)
             .post(`/api/friends/${friend._id}/preferences/remove`)
@@ -467,7 +479,8 @@ describe("POST /api/friends/:id/preferences/remove", () => {
 //         const friend = await Friend.create({
 //             name: 'test',
 //             dob: '1997-01-26',
-//             user: user.payload
+//             user: user.payload,
+//             gender: 'female'
 //         });
 //         const res = await request(app)
 //             .post(`/api/friends/${friend._id}/upload`)

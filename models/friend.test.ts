@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 import Friend from "./friend";
-import Gift from "./gift";
+import User from "./user";
 
 const now = new Date();
-
+let userId: string;
 declare global {
     var __MONGO_URI__: string;
 }
@@ -11,6 +11,16 @@ declare global {
 beforeAll(async () => {
     await mongoose.connect(global.__MONGO_URI__);
     await Friend.deleteMany({});
+    await User.deleteMany({});
+    const user = await User.create({
+        email: "test@email.com",
+        passwordHash: "123456Aa!",
+        name: "test",
+        dob: "1990-08-08",
+        gender: "female",
+        lastName: "user"
+    });
+    userId = user._id.toString();
 });
 
 afterAll(async () => {
@@ -23,9 +33,11 @@ describe('Friend DOB Validation', () => {
         validDOB.setFullYear(now.getFullYear() - 100);
 
         const validFriend = await Friend.create({
-           name: 'test',
+            name: 'test',
             dob: validDOB,
-            photo: 'test'
+            photo: 'test',
+            gender: 'female',
+            user: userId
         });
 
         expect(validFriend).toBeDefined();
@@ -35,15 +47,17 @@ describe('Friend DOB Validation', () => {
         const futureDOB = new Date(now);
         futureDOB.setFullYear(now.getFullYear() + 1);
 
-       try {
+        try {
             await Friend.create({
                 name: 'test',
                 dob: futureDOB,
                 photo: 'test',
+                gender: 'female',
+                user: userId,
             });
 
             fail('Expected an error, but the friend was created'); // fails test if friend was created with invalid DOB
-        } catch (error : any) {
+        } catch (error: any) {
             expect(error.message).toContain('Date of birth cannot be in the future'); // passes test if friend is not created
         }
     });
@@ -54,6 +68,8 @@ describe('Friend DOB Validation', () => {
             name: 'test',
             dob: now,
             photo: 'test',
+            gender: 'female',
+            user: userId,
         });
 
         expect(newborn).toBeDefined();
