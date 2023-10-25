@@ -383,3 +383,76 @@ describe("DELETE /api/friends/:id/tags/:tagId", () => {
         expect(response.body.message).toBe("User not authorized for this request");
     });
 });
+
+describe("POST /api/friends/:id/preferences", () => {
+    it("should add a preference and return friend object", async () => {
+        await Friend.deleteMany({});
+        const friend = await Friend.create({
+            name: 'test',
+            dob: '1997-01-26',
+            photo: 'string',
+            bio: 'a test user',
+        });
+        const response = await request(app)
+            .post(`/api/friends/${friend._id}/preferences`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ preference: "present" })
+            .expect(200);
+        expect(response.body.friend).toBeDefined();
+        expect(response.body.friend.giftPreferences.length).toBeGreaterThan(0);
+    });
+
+    it("should throw an error if preference is not known", async () => {
+        await Friend.deleteMany({});
+        const friend = await Friend.create({
+            name: 'test',
+            dob: '1997-01-26',
+            photo: 'string',
+            bio: 'a test user',
+        });
+        const response = await request(app)
+            .post(`/api/friends/${friend._id}/preferences`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ preference: "unknownPreference" })
+            .expect(500);
+    });
+
+});
+
+describe("POST /api/friends/:id/preferences/remove", () => {
+    it("should remove an existing preference and return friend object", async () => {
+        await Friend.deleteMany({});
+        const friend = await Friend.create({
+            name: 'test',
+            dob: '1997-01-26',
+            photo: 'string',
+            bio: 'a test user',
+            giftPreferences: ["present", "experience"],
+        });
+        const response = await request(app)
+            .post(`/api/friends/${friend._id}/preferences/remove`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ preference: "present" })
+            .expect(200);
+        expect(response.body.friend).toBeDefined();
+        expect(response.body.friend.giftPreferences).not.toContain("present");
+    });
+
+    it("should not throw an error if a known preference is not contained in the array", async () => {
+        await Friend.deleteMany({});
+        const friend = await Friend.create({
+            name: 'test',
+            dob: '1997-01-26',
+            photo: 'string',
+            bio: 'a test user',
+            giftPreferences: ["experience"],
+        });
+        const response = await request(app)
+            .post(`/api/friends/${friend._id}/preferences/remove`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ preference: "present" })
+            .expect(200);
+        expect(response.body.friend).toBeDefined();
+        expect(response.body.friend.giftPreferences).not.toContain("present");
+    });
+});

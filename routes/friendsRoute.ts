@@ -11,6 +11,8 @@ router.delete('/:id/delete', requireLogin, friendCtrl.deleteFriend);
 router.put('/:id/update', requireLogin, friendCtrl.updateFriend);
 router.post('/:id/tags', requireLogin, friendCtrl.addTag);
 router.delete('/:id/tags/:tagId', requireLogin, friendCtrl.removeTag);
+router.post('/:id/preferences', requireLogin, friendCtrl.addPreference);
+router.post('/:id/preferences/remove', requireLogin, friendCtrl.removePreference);
 
 
 export default router;
