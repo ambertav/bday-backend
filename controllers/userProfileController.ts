@@ -68,8 +68,7 @@ export async function uploadUserPhoto(req: Request & IExtReq, res: Response) {
             await profile.save();
             
             res.setHeader('Cache-Control', 'no-cache');
-
-            return res.status(200).json({ message: 'Photo uploaded successfully' });
+            return res.status(200).json({ photoUrl: s3ProfilePhotoUrl, message: 'Photo uploaded successfully' });
             
         } catch (userError) {
             console.error('Error updating user profile photo:', userError);
