@@ -11,6 +11,7 @@ import { PutObjectCommand, s3BaseUrl, s3Client } from '../utilities/s3upload';
 interface IFriendRequest {
     name: string;
     location: string;
+    gender: string;
     dob: Date;
     photo: string;
     bio: string;
@@ -22,11 +23,12 @@ interface IFriendRequest {
 
 export async function addFriend(req: Request & IExtReq, res: Response) {
     try {
-        const { name, location, dob, bio, interests, tags, giftPreferences }: IFriendRequest = req.body;
+        const { name, location, gender, dob, bio, interests, tags, giftPreferences }: IFriendRequest = req.body;
 
         const newFriend: IFriendDocument = new Friend({
             name,
             location,
+            gender,
             dob,
             bio,
             interests,
