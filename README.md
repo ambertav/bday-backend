@@ -119,7 +119,7 @@ Note: The photo upload utilizes AWS S3 for storage.
   - `friend[]`
 
 ### Add Friend
-- **Endpoint**: `POST /api/friends`
+- **Endpoint**: `POST /api/friends/create`
 - **Authorization**: Bearer Token
 - **Request Body**: JSON object containing:
   - `name` (required, string)
@@ -149,7 +149,7 @@ Note: The photo upload utilizes AWS S3 for storage.
   - `friend`
 
 ### Delete Friend
-- **Endpoint**: `DELETE /api/friends/:id`
+- **Endpoint**: `DELETE /api/friends/:id/delete`
 - **Authorization**: Bearer Token
 - **Response**: JSON object containing:
   -  `message: 'Friend deleted successfully'`
