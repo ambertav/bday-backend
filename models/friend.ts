@@ -9,6 +9,11 @@ const friendSchema = new mongoose.Schema({
         required: true,
         trim: true,
     },
+    gender: {
+        type: String,
+        enum: ["female", "male", "other"],
+        required: true,
+    },
     location: {
         type: String,
         maxLength: 30,
@@ -79,6 +84,7 @@ friendSchema.pre('deleteOne', async function (next) {
 export interface IFriendDocument extends mongoose.Document {
     name: string;
     location: string;
+    gender: string;
     dob: Date;
     photo: string;
     bio: string;
