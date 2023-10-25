@@ -52,7 +52,7 @@ export async function findFriends(req: Request & IExtReq, res: Response) {
     try {
         const friends = await Friend.find({ user: req.user });
         if (friends.length > 0) return res.status(200).json(friends);
-        else if (friends.length === 0) return res.status(204).json('No friends found');
+        else if (friends.length === 0) return res.status(200).json({ message: 'No friends found' });
 
     } catch (error: any) {
         return res.status(500).json({

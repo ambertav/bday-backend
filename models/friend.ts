@@ -57,6 +57,13 @@ const friendSchema = new mongoose.Schema({
     }
 }, {
     timestamps: true,
+    toJSON: {
+        transform: function (_, ret) {
+            if (ret.dob instanceof Date) {
+                ret.dob = ret.dob.toISOString().split('T')[0]; // Format date as 'yyyy-mm-dd'
+            }
+        }
+    }
 });
 
 // validation for DOB input
