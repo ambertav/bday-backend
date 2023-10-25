@@ -1,17 +1,21 @@
-import { HTTPError, fetchImageThumbnail, sendError } from "../utilities/utils";
+import { HTTPError, fetchImageThumbnail, sendError, rateLimiterOpenAI } from "../utilities/utils";
 import GiftRecommendation from "../models/giftRecommendation";
 import { Request, Response } from "express";
 import Friend from "../models/friend";
 import { IExtReq } from "../interfaces/auth";
 
+import OpenAI from 'openai';
+const openai = new OpenAI();
+
+
 const SYS_PROMPT = `**TASK**
 Generate gift recommendations based on input.
 **CONSTRAINTS**
 + You will be given an input in the input format. Base your recommendations on the provided input
-+ You must only and exactly reply in the desired OUTPUT FORMAT. OUTPUT must include 5 gift ideas. Only reply as an array of JSON Objects as described in OUTPUT FORMAT
++ You must only and exactly reply in the desired OUTPUT FORMAT. OUTPUT must include 3 gift ideas. Only reply as an array of JSON Objects as described in OUTPUT FORMAT
 **INPUT FORMAT**
 {
-    "giftPreferences": "(required) what types of gifts the person preferes. i.e. present, experience, donation, etc.",
+    "giftTypes": "(required) what types of gifts the person preferes. i.e. present, experience, donation, etc.",
     "tags": ["(required)  an array of short tags desciribing the person, can be anything from gender to aesthetics to generic tags"],
     "budget": "the maximum ballpark cost of the gift recommendation",
     "age": "(required)  age of the person the gift is for",
@@ -27,9 +31,44 @@ Generate gift recommendations based on input.
 ]`
 export async function recommendGift(req: Request & IExtReq, res: Response) {
     try {
+        if (rateLimiterOpenAI.isRateLimited('limit reached')) return res.status(429).json({ message: 'Limit reached, try again later' });
         const friend = await Friend.findById(req.params.id);
         if(!friend) throw {status: 404, message: "Friend not found"};
-        let {tags, giftTypes, budget} = req.body;
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const age = year - friend.dob.getFullYear();
+        const gender = friend.gender;
+
+        let { tags, giftTypes, budget } = req.body;
+
+        const userContent = `{
+            'giftTypes': ${ giftTypes },
+            'tags': ${ tags },
+            'age': ${ age },
+            'gender': ${ gender },
+            ${ budget ? `'budget': ${ budget }` : '' }
+        }`
+
+        const response = await openai.chat.completions.create({
+            model: 'gpt-3.5-turbo',
+            messages: [
+                { 'role': 'system', 'content': SYS_PROMPT }, 
+                { 'role': 'user', 'content': userContent },
+            ]
+        });
+
+        // parsing recommendations from openai
+        const recommendations =  JSON.parse(response.choices[0].message.content!);
+        
+        for (const rec of recommendations) {
+            // using recommendations' image query to call to bing for image urls
+            let url = await fetchImageThumbnail(rec.imageSearchQuery, process.env.BING_API_KEY!);
+            rec['imgSrc'] = url;
+        }
+
+        if (recommendations) return res.status(200).json({ recommendations, message: 'Gift recommendations generated' });
+        else return res.status(500);
 
     } catch (error: any) {
         if ('status' in error && 'message' in error) {
