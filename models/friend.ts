@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Gift from './gift';
+import { GIFT_PREFERENCES } from '../utilities/constants';
 
 const friendSchema = new mongoose.Schema({
     name: {
@@ -40,6 +41,15 @@ const friendSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
     },
+    giftPreferences: {
+        type: [String],
+        validate: {
+            validator: function(value: string[]) {
+              return value.every(v => GIFT_PREFERENCES.includes(v.toLowerCase()));
+            },
+            message: "Invalid gift type."
+          }
+    }
 }, {
     timestamps: true,
 });
@@ -75,6 +85,7 @@ export interface IFriendDocument extends mongoose.Document {
     interests: string[];
     tags: mongoose.Types.ObjectId[],
     user: mongoose.Types.ObjectId,
+    giftPreferences: string[];
 }
 
 export default mongoose.model <IFriendDocument> ('Friend', friendSchema);
