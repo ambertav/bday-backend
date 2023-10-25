@@ -9,6 +9,6 @@ const s3Config = {
 };
 
 const s3Client = new S3Client(s3Config);
-const s3BaseUrl = 'https://s3.us-east-2.amazonaws.com/';
+const s3BaseUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/`;
 
 export { s3Client, s3BaseUrl, PutObjectCommand };
