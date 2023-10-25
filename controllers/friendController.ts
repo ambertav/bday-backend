@@ -12,8 +12,9 @@ interface IFriendRequest {
     dob: Date;
     photo: string;
     bio: string;
-    interests: [string];
+    interests: string[];
     tags: mongoose.Types.ObjectId[],
+    giftPreferences: string[];
 }
 
 
