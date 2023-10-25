@@ -1,1 +1,1 @@
-export const GIFT_PREFERENCES = ["present", "experience"];
+export const GIFT_PREFERENCES = ["present", "experience", "donation"];
