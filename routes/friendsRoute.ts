@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as friendCtrl from '../controllers/friendController';
+import * as giftCtrl from '../controllers/giftRecommendationController';
 import requireLogin from '../middleware/requireLogin';
 
 const router = Router();
@@ -14,6 +15,7 @@ router.delete('/:id/tags/:tagId', requireLogin, friendCtrl.removeTag);
 router.post('/:id/preferences', requireLogin, friendCtrl.addPreference);
 router.post('/:id/preferences/remove', requireLogin, friendCtrl.removePreference);
 router.post('/:id/upload', requireLogin, friendCtrl.uploadFriendPhoto);
+router.post('/:id/generate-gift', requireLogin, giftCtrl.recommendGift);
 
 
 export default router;
