@@ -117,6 +117,7 @@ Note: The photo upload utilizes AWS S3 for storage.
 - **Request Body**: JSON object containing:
   - `name` (required, string)
   - `dob` (required, Date - yyyy-mm-dd)
+  - `gender` (required, string - one of "female", "male", "other")
   - `location` (optional, string)
   - `bio` (optional, string)
   - `interests` (optional, string[])
@@ -157,6 +158,7 @@ Note: The photo upload utilizes AWS S3 for storage.
   - `interests` (optional, string[])
   - `tags` (optional, string[] - objectIds)
   - `giftPreferences` (optional, string[])
+  - `gender` (optional, string - one of "female", "male", "other")
 - **Response**: JSON object containing:
   -  `message: 'Friend updated'`
 
@@ -196,6 +198,17 @@ Note: tagId must be a valid, existing tag's Id. If the friend's tags array does 
   - `preference` (required, string - must be known to the backend. Currently "present", "experience" and "donation" are accepted)
 - **Response**: JSON object containing:
   - `friend`
+
+### Generate 3 Gift Recommendations
+- **Endpoint**: `POST /api/friends/:id/generate-gift`
+- **Authorization**: Bearer Token
+- **Request Body**: JSON object containing:
+  - `giftTypes` (required, string[] - must be known to the backend. Currently "present", "donation" and "experience" are accepted)
+  - `tags` (required, string[] - names of tags to be sent with the query)
+  - `budget` (optional, number - recommendations will try to be below this amount)
+- **Response**: JSON object containing:
+  - `recommendations`
+  - `message: ''`
 
 ## Tags
 
