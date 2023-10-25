@@ -13,12 +13,12 @@ Server runs on PORT 3010 by default.
 
 - **Endpoint**: `POST /api/users`
 - **Request Body**: JSON object containing:
-  - `email` (required)
-  - `password` (required)
-  - `name` (required)
-  - `dob` (required)
-  - `gender` (required)
-  - `tel` (optional)
+  - `email` (required, string)
+  - `password` (required, string)
+  - `name` (required, string)
+  - `dob` (required, Date - yyyy-mm-dd)
+  - `gender` (required, sring - one of "female", "male", "other")
+  - `tel` (optional, number)
 - **Response**: JSON object containing:
   - `accessToken`
 - **Side Effect**: Creates an empty UserProfile
@@ -27,8 +27,8 @@ Server runs on PORT 3010 by default.
 
 - **Endpoint**: `POST /api/users/login`
 - **Request Body**: JSON object containing:
-  - `email` (required)
-  - `password` (required)
+  - `email` (required, string)
+  - `password` (required, string)
 - **Response**: JSON object containing:
   - `accessToken`
 
@@ -42,17 +42,18 @@ Server runs on PORT 3010 by default.
 - **Endpoint**: `PUT /api/users/password`
 - **Authorization**: Bearer Token
 - **Request Body**: JSON object containing:
-  - `oldPassword` (required)
-  - `newPassword` (required)
+  - `oldPassword` (required, string)
+  - `newPassword` (required, string)
 
 ### Update User Information
 
 - **Endpoint**: `PUT /api/users`
 - **Authorization**: Bearer Token
 - **Request Body**: JSON object containing:
-  - `firstName` (optional)
-  - `lastName` (optional)
-  - `tel` (optional)
+  - `name` (optional, string)
+  - `tel` (optional, number)
+  - `dob` (optional, Date)
+  - `gender` (optional, sring - one of "female", "male", "other")
 
 ### Delete User
 
@@ -66,7 +67,7 @@ Server runs on PORT 3010 by default.
 - **Endpoint**: `POST /api/confirm-delete`
 - **Authorization**: Bearer Token
 - **Request Body**: JSON object containing:
-  - `confirmationToken` (required)
+  - `confirmationToken` (required, string)
 - **Side Effect**: Deletes associated UserProfile
 
 ## User Profile
@@ -76,8 +77,8 @@ Server runs on PORT 3010 by default.
 - **Endpoint**: `PUT /api/users/profile`
 - **Authorization**: Bearer Token
 - **Request Body**: JSON object containing (any of):
-  - `dob` (optional, Date of Birth)
-  - `bio` (optional, Biography)
+  - `interests` (optional, string[])
+  - `bio` (optional, string)
 - **Response**: JSON object containing:
   - `message: "User profile updated"`
   - `profile`

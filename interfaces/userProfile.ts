@@ -1,4 +1,4 @@
 export interface IUserProfileDetails{
-    dob?: Date;
+    interests: string[];
     bio?: string;
 }
