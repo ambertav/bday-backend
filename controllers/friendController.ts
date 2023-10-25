@@ -4,6 +4,8 @@ import Friend, { IFriendDocument } from '../models/friend';
 import { IExtReq } from '../interfaces/auth';
 import { HTTPError, sendError } from '../utilities/utils';
 import Tag from '../models/tag';
+import { UploadedFile } from 'express-fileupload';
+import { PutObjectCommand, s3BaseUrl, s3Client } from '../utilities/s3upload';
 
 
 interface IFriendRequest {
@@ -20,16 +22,16 @@ interface IFriendRequest {
 
 export async function addFriend(req: Request & IExtReq, res: Response) {
     try {
-        const { name, location, dob, photo, bio, interests, tags }: IFriendRequest = req.body;
+        const { name, location, dob, bio, interests, tags, giftPreferences }: IFriendRequest = req.body;
 
         const newFriend: IFriendDocument = new Friend({
             name,
             location,
             dob,
-            photo,
             bio,
             interests,
             tags,
+            giftPreferences,
             user: req.user
         });
 
@@ -109,6 +111,7 @@ export async function updateFriend(req: Request & IExtReq, res: Response) {
             };
 
             delete updateFields.user; // so that it can't update the user
+            delete updateFields.photo; // use photo upload endpoint instead
             const result = await Friend.updateOne({ _id: friendId }, { $set: updateFields });
             if (result) return res.status(204).json({ message: 'Friend updated' });
         }
@@ -191,7 +194,7 @@ export async function addPreference(req: Request & IExtReq, res: Response) {
             friend.giftPreferences.push(preference);
             await friend.save();
         }
-        res.status(200).json({friend});
+        res.status(200).json({ friend });
     } catch (error: any) {
         if ('status' in error && 'message' in error) {
             sendError(res, error as HTTPError);
@@ -215,12 +218,47 @@ export async function removePreference(req: Request & IExtReq, res: Response) {
             friend.giftPreferences.splice(index, 1);
             await friend.save();
         }
-        res.status(200).json({friend});
+        res.status(200).json({ friend });
     } catch (error: any) {
         if ('status' in error && 'message' in error) {
             sendError(res, error as HTTPError);
         } else {
             res.status(500).json({ message: "Internal server error" });
         }
+    }
+}
+
+export async function uploadFriendPhoto(req: Request & IExtReq, res: Response) {
+    try {
+        const file = req.files!.photo as UploadedFile;
+        const fileType = file.name.split('.')[1];
+        const fileData = file.data
+        const friend = await Friend.findById(req.params.id);
+        if(!friend) return res.status(404).json({message: "Friend not found"});
+        if (friend?.user.toString() !== req.user?.toString()) return res.status(403).json({message: "User not authorized for this request" });
+        const fileName = `${req.params.id}.${fileType}`
+    
+        const bucketParams = {
+            Bucket: process.env.AWS_S3_BUCKET,
+            Key: fileName,
+            Body: fileData
+        };
+        const result = await s3Client.send(new PutObjectCommand(bucketParams));
+        const s3ProfilePhotoUrl = `${s3BaseUrl}${bucketParams.Bucket}/${fileName}`;
+
+        try {
+            friend.photo = s3ProfilePhotoUrl;
+            await friend.save();
+
+            res.setHeader('Cache-Control', 'no-cache');
+            return res.status(200).json({ photoUrl: s3ProfilePhotoUrl, message: 'Photo uploaded successfully' });
+
+        } catch (userError) {
+            console.error('Error updating user profile photo:', userError);
+            res.status(500).send('Error updating user profile photo');
+        }
+    } catch (s3Error) {
+        console.error('Error uploading profile photo to AWS S3:', s3Error);
+        res.status(500).send('Error uploading profile photo to AWS S3');
     }
 }

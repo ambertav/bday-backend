@@ -392,6 +392,7 @@ describe("POST /api/friends/:id/preferences", () => {
             dob: '1997-01-26',
             photo: 'string',
             bio: 'a test user',
+            user: user.payload,
         });
         const response = await request(app)
             .post(`/api/friends/${friend._id}/preferences`)
@@ -409,6 +410,7 @@ describe("POST /api/friends/:id/preferences", () => {
             dob: '1997-01-26',
             photo: 'string',
             bio: 'a test user',
+            user: user.payload,
         });
         const response = await request(app)
             .post(`/api/friends/${friend._id}/preferences`)
@@ -428,6 +430,7 @@ describe("POST /api/friends/:id/preferences/remove", () => {
             photo: 'string',
             bio: 'a test user',
             giftPreferences: ["present", "experience"],
+            user: user.payload,
         });
         const response = await request(app)
             .post(`/api/friends/${friend._id}/preferences/remove`)
@@ -446,6 +449,7 @@ describe("POST /api/friends/:id/preferences/remove", () => {
             photo: 'string',
             bio: 'a test user',
             giftPreferences: ["experience"],
+            user: user.payload,
         });
         const response = await request(app)
             .post(`/api/friends/${friend._id}/preferences/remove`)
@@ -456,3 +460,28 @@ describe("POST /api/friends/:id/preferences/remove", () => {
         expect(response.body.friend.giftPreferences).not.toContain("present");
     });
 });
+
+// describe("POST /api/friends/:id/upload", () => {
+//     it("should upload a photo and return its url", async () => {
+//         await Friend.deleteMany({});
+//         const friend = await Friend.create({
+//             name: 'test',
+//             dob: '1997-01-26',
+//             user: user.payload
+//         });
+//         const res = await request(app)
+//             .post(`/api/friends/${friend._id}/upload`)
+//             .set('Authorization', `Bearer ${token}`)
+//             .attach('photo', './testimage.png');
+
+//         expect(res.status).toBe(200);
+//         expect(res.body.message).toBe('Photo uploaded successfully');
+//         expect(res.body.photoUrl).toBeDefined();
+//         const photoUrl = res.body.photoUrl;
+
+//         const retrievedFriend = await Friend.findOne({ name: 'test', user: user.payload });
+//         expect(retrievedFriend).not.toBeNull();
+//         expect(retrievedFriend?.photo).toEqual(photoUrl);
+
+//     }, 10000);
+// });
