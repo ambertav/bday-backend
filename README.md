@@ -193,7 +193,7 @@ Note: tagId must be a valid, existing tag's Id. If the friend's tags array does 
 - **Endpoint**: `POST /api/friends/:id/preferences/remove`
 - **Authorization**: Bearer Token
 - **Request Body**: JSON object containing:
-  - `preference` (required, string - must be known to the backend. Currently "present" and "experience" are accepted)
+  - `preference` (required, string - must be known to the backend. Currently "present", "experience" and "donation" are accepted)
 - **Response**: JSON object containing:
   - `friend`
 
