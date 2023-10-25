@@ -64,8 +64,7 @@ describe('POST /api/friends/create', () => {
     it('should create a new friend', async () => {
 
         const requestBody = {
-            firstName: 'test',
-            lastName: 'test',
+            name: 'test',
             dob: '1997-01-26',
             photo: 'string',
             bio: 'a test user',
@@ -89,8 +88,7 @@ describe('GET /api/friends/', () => {
     describe('GET /api/friends/', () => {
         it('should retrieve all of the user\'s friends', async () => {
             const friendData = {
-                firstName: 'test',
-                lastName: 'test',
+                name: 'test',
                 dob: '1997-01-26',
                 photo: 'string',
                 bio: 'a test user',
@@ -131,8 +129,7 @@ describe('GET /api/friends/:id', () => {
     it('should return a single friend associated with the user', async () => {
 
         const requestBody = {
-            firstName: 'test',
-            lastName: 'test',
+            name: 'test',
             dob: '1997-01-26',
             photo: 'string',
             bio: 'a test user',
@@ -163,8 +160,7 @@ describe('DELETE /api/friends/:id/delete', () => {
     it('should delete a user\'s friend only if the friend belongs to user and is found', async () => {
 
         const friendData = {
-            firstName: 'test',
-            lastName: 'test',
+            name: 'test',
             dob: '1997-01-26',
             photo: 'string',
             bio: 'a test user',
@@ -202,8 +198,7 @@ describe('DELETE /api/friends/:id/delete', () => {
 describe('PUT /api/friends/:id/update', () => {
     it('should update a user\'s friend', async () => {
         const friendData = {
-            firstName: 'test',
-            lastName: 'test',
+            name: 'test',
             dob: '1997-01-26',
             photo: 'string',
             bio: 'a test user',
@@ -219,7 +214,7 @@ describe('PUT /api/friends/:id/update', () => {
 
         const updateString = {
             ...friendData,
-            firstName: 'testing'
+            name: 'testing'
         }
 
         const updateInterests = {
@@ -243,7 +238,7 @@ describe('PUT /api/friends/:id/update', () => {
         expect(stringResponse.statusCode).toBe(204);
 
         const updatedFriend = await Friend.findById(friend._id);
-        expect(updatedFriend?.firstName).toEqual(updateString.firstName);
+        expect(updatedFriend?.name).toEqual(updateString.name);
 
         // tests if the interests array field will be updated
         const interestsResponse = await request(app)

@@ -2,16 +2,15 @@ import mongoose from 'mongoose';
 import Gift from './gift';
 
 const friendSchema = new mongoose.Schema({
-    firstName: {
+    name: {
         type: String,
         maxLength: 30,
         required: true,
         trim: true,
     },
-    lastName: {
+    location: {
         type: String,
         maxLength: 30,
-        required: true,
         trim: true,
     },
     dob: {
@@ -68,8 +67,8 @@ friendSchema.pre('deleteOne', async function (next) {
 });
 
 export interface IFriendDocument extends mongoose.Document {
-    firstName: string;
-    lastName: string;
+    name: string;
+    location: string;
     dob: Date;
     photo: string;
     bio: string;
