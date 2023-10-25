@@ -1,13 +1,10 @@
 import { Request, Response } from "express";
-import { S3Client } from "@aws-sdk/client-s3";
-import multer from 'multer';
-import multerS3 from 'multer-s3';
 import UserProfile from "../models/userProfile";
 import { HTTPError, sendError } from "../utilities/utils";
 import { IUserProfileDetails } from "../interfaces/userProfile";
 import { IExtReq } from "../interfaces/auth";
-
-const { AWS_REGION, AWS_SECRET, AWS_S3_BUCKET, AWS_ID } = process.env!;
+import { s3Client, s3BaseUrl, PutObjectCommand } from '../utilities/s3upload';
+import { UploadedFile } from 'express-fileupload';
 
 export async function updateProfileDetails(req: Request & IExtReq, res: Response) {
     try {
@@ -47,29 +44,39 @@ export async function getUserProfile(req: Request & IExtReq, res: Response) {
     }
 }
 
-export async function uploadUserPhoto(req: Request & IExtReq, res: Response) {
-    try {       
-        const s3Client = new S3Client({ region: AWS_REGION, credentials: { accessKeyId: AWS_ID!, secretAccessKey: AWS_SECRET! } });
-        const upload = multer({
-            storage: multerS3({
-                s3: s3Client,
-                bucket: AWS_S3_BUCKET!,
-                key: function (req: Request & IExtReq, file, cb) {
-                    cb(null, req.user?.toString())
-                }
-            })
-        }).single('photo');
-        upload(req, res, function (err) {
-            if (err) {
-                throw { status: 500, message: err.message };
-            }
-            res.status(200).json({ message: 'Photo uploaded successfully' });
-        });
-    } catch (error: any) {
-        if ('status' in error && 'message' in error) {
-            sendError(res, error as HTTPError);
-        } else {
-            return res.status(500).json({ message: error.message });
+export async function uploadUserPhoto(req: Request & IExtReq, res: Response) {     
+        const file = req.files!.photo as UploadedFile;
+        const fileType = file.name.split('.')[1];
+        const fileData = file.data
+        const fileName = `${req.user}.${fileType}`
+
+        const bucketParams = {
+            Bucket: process.env.AWS_S3_BUCKET,
+            Key: fileName,
+            Body: fileData
+        };
+
+    try {  
+        const result = await s3Client.send(new PutObjectCommand(bucketParams));
+        const s3ProfilePhotoUrl = `${s3BaseUrl}${bucketParams.Bucket}/${fileName}`;
+
+        try {    
+            const profile = await UserProfile.findOne({ user: req.user });
+            if (!profile) throw { status: 404, message: "Profile not found" };
+
+            profile.photo = s3ProfilePhotoUrl;
+            await profile.save();
+            
+            res.setHeader('Cache-Control', 'no-cache');
+
+            return res.status(200).json({ message: 'Photo uploaded successfully' });
+            
+        } catch (userError) {
+            console.error('Error updating user profile photo:', userError);
+            res.status(500).send('Error updating user profile photo');
         }
+    } catch (s3Error) {
+        console.error('Error uploading profile photo to AWS S3:', s3Error);
+        res.status(500).send('Error uploading profile photo to AWS S3');
     }
 }

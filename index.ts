@@ -3,6 +3,7 @@ import path from 'path';
 import express from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
+import fileUpload from 'express-fileupload';
 import sanitize from 'express-mongo-sanitize';
 import bearer from './middleware/bearer';
 import usersRoute from './routes/usersRoute';
@@ -10,6 +11,7 @@ import friendsRoute from './routes/friendsRoute';
 import userProfileRoute from './routes/userProfileRoute';
 import tagsRoute from './routes/tagsRoute';
 import connectDB from './utilities/db';
+
 
 const DEBUG = process.env.NODE_ENV ? process.env.NODE_ENV.toLocaleLowerCase() !== 'production' : true; // Fix DEBUG logic
 const PORT = process.env.PORT || 3010;
@@ -22,6 +24,7 @@ export const configureApp = (middleware?: any[]) => {
     app.use(express.json());
     app.use(express.static(path.join(__dirname, 'build')));
     app.use(sanitize());
+    app.use(fileUpload());
 
     app.use(cors());
 

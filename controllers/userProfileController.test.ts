@@ -46,15 +46,27 @@ afterAll(async () => {
 
 describe("User Profile Controller", () => {
 
-    // // Add a .png on the root of project to run this test
-    // it("should upload a photo", async () => {
-    //     const res = await request(app)
-    //         .post('/api/users/profile/upload')
-    //         .set('Authorization', `Bearer ${token}`)
-    //         .attach('photo','./testimage.png');
-    //     expect(res.status).toBe(200);
-    //     expect(res.body.message).toBe('Photo uploaded successfully');
-    // },10000);
+    // Add a .png on the root of project to run this test
+    it("should upload a photo", async () => {
+        const res = await request(app)
+            .post('/api/users/profile/upload')
+            .set('Authorization', `Bearer ${token}`)
+            .attach('photo','./testimage.png');
+
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('Photo uploaded successfully');
+
+
+        const profileResponse = await request(app)
+        .get('/api/users/profile')
+        .set('Authorization', `Bearer ${token}`);
+
+        expect(profileResponse.status).toBe(200);
+
+        const photoUrl = profileResponse.body.photoUrl;
+        expect(photoUrl).not.toBeNull();
+        
+    },10000);
 
     it("should update user profile", async () => {
         const res = await request(app)
