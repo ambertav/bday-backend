@@ -208,7 +208,7 @@ Note: tagId must be a valid, existing tag's Id. If the friend's tags array does 
   - `budget` (optional, number - recommendations will try to be below this amount)
 - **Response**: JSON object containing:
   - `recommendations`
-  - `message: ''`
+  - `message: 'Gift recommendations generated'`
 
 ## Tags
 
