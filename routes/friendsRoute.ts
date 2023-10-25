@@ -9,6 +9,8 @@ router.get('/', requireLogin, friendCtrl.findFriends);
 router.get('/:id', requireLogin, friendCtrl.showFriend);
 router.delete('/:id/delete', requireLogin, friendCtrl.deleteFriend);
 router.put('/:id/update', requireLogin, friendCtrl.updateFriend);
+router.post('/:id/tags', requireLogin, friendCtrl.addTag);
+router.delete('/:id/tags/:tagId', requireLogin, friendCtrl.removeTag);
 
 
 export default router;
