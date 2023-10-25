@@ -263,3 +263,123 @@ describe('PUT /api/friends/:id/update', () => {
         expect(updatedTagsFriend?.tags).toEqual(updateTags.tags);
     });
 });
+
+describe("POST /api/friends/:id/tags", () => {
+    it("should add an existing tag to friend", async () => {
+        const friendData = {
+            name: 'test',
+            dob: '1997-01-26',
+            photo: 'string',
+            bio: 'a test user',
+            interests: ['testing', 'this is a test'],
+            tags: [],
+            user: user.payload
+        }
+        const friend = await Friend.create(friendData);
+        const friendId = friend._id.toString();
+
+        const tagData = { title: "existingTag", type: "custom" };
+        const existingTag = await Tag.create(tagData);
+        const existingTagId = existingTag._id.toString();
+        const response = await request(app)
+            .post(`/api/friends/${friendId}/tags`)
+            .send({ title: "existingTag", type: "custom" })
+            .set('Authorization', `Bearer ${token}`)
+            .expect(200);
+
+        expect(response.body._id).toBe(existingTagId);
+    });
+    it("should create and add a non-existing tag to friend", async () => {
+        await Tag.deleteMany({});
+        await Friend.deleteMany({});
+        const friendData = {
+            name: 'test',
+            dob: '1997-01-26',
+            photo: 'string',
+            bio: 'a test user',
+            interests: ['testing', 'this is a test'],
+            tags: [],
+            user: user.payload
+        }
+        const friend = await Friend.create(friendData);
+        const friendId = friend._id.toString();
+        expect(friend.tags.length).toEqual(0);
+        const response = await request(app)
+            .post(`/api/friends/${friendId}/tags`)
+            .send({ title: "newTag", type: "custom" })
+            .set('Authorization', `Bearer ${token}`)
+            .expect(201);
+
+        expect(response.body._id).toBeDefined();
+        const retrievedFriend = await Friend.findById(friendId);
+        expect(retrievedFriend?.tags.length).toBeGreaterThan(0);
+    });
+    it("should not add the same tag twice to friend", async () => {
+        const friend = await Friend.findOne({}).populate("tags");
+        const tagCount = friend?.tags.length;
+        expect(tagCount).toBeGreaterThan(0);
+        const tag = await Tag.findById(friend?.tags[0]);
+        expect(tag).not.toBeNull();
+        const response = await request(app)
+            .post(`/api/friends/${friend?._id}/tags`)
+            .send({ title: tag?.title, type: tag?.type })
+            .set('Authorization', `Bearer ${token}`)
+            .expect(200);
+        const retrievedFriend = await Friend.findById(friend?._id);
+        expect(retrievedFriend?.tags.length).toEqual(tagCount);
+    });
+});
+
+describe("DELETE /api/friends/:id/tags/:tagId", () => {
+    it("should remove an existing tag from friend", async () => {
+        const friend = await Friend.findOne({}).populate("tags");
+        const tag = await Tag.findById(friend?.tags[0]);
+        const tagCount = friend?.tags.length;
+
+        const response = await request(app)
+            .delete(`/api/friends/${friend?._id}/tags/${tag?._id}`)
+            .set('Authorization', `Bearer ${token}`)
+            .expect(200);
+
+        expect(response.body.message).toBe("Tag removed");
+        const retrievedFriend = await Friend.findById(friend?._id).populate("tags");
+        expect(retrievedFriend?.tags.length).toEqual(tagCount! - 1);
+    });
+
+    it("should not throw an error if the tag does not exist on friend", async () => {
+        const friend = await Friend.findOne({});  // Pick any friend
+
+        // Create a tag that's not associated with the friend
+        const tagData = { title: "unassociatedTag", type: "custom" };
+        const unassociatedTag = await Tag.create(tagData);
+        const unassociatedTagId = unassociatedTag._id.toString();
+
+        const response = await request(app)
+            .delete(`/api/friends/${friend?._id}/tags/${unassociatedTagId}`)
+            .set('Authorization', `Bearer ${token}`)
+            .expect(204);
+    });
+
+    it("should not remove tag from a different user's friend", async () => {
+        // Create a friend belonging to otherUser
+        const otherFriendData = {
+            name: 'test',
+            dob: '1997-01-26',
+            photo: 'string',
+            bio: 'a test user',
+            interests: ['testing', 'this is a test'],
+            tags: [],
+            user: otherUser.payload
+        };
+        const otherFriend = await Friend.create(otherFriendData);
+
+        const tag = await Tag.findOne({}); // Any tag that exists in the DB
+
+        const response = await request(app)
+            .delete(`/api/friends/${otherFriend._id}/tags/${tag?._id}`)
+            .set('Authorization', `Bearer ${token}`) // This should be first user's token
+            .expect(403); // Forbidden
+
+        expect(response.body.message).toBe("User not authorized for this request");
+    });
+});
