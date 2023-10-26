@@ -79,6 +79,13 @@ Server runs on PORT 3010 by default.
 
 ## User Profile
 
+### Get Current User and Profile
+- **Endpoint**: `GET /api/users/profile/all`
+- **Authorization**: Bearer Token
+- **Response**: JSON object containing:
+  - `user`
+  - `profile`
+
 ### Update Profile Details
 
 - **Endpoint**: `PUT /api/users/profile`

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import UserProfile from "../models/userProfile";
+import User from "../models/user";
 import { HTTPError, sendError } from "../utilities/utils";
 import { IUserProfileDetails } from "../interfaces/userProfile";
 import { IExtReq } from "../interfaces/auth";
@@ -44,32 +45,32 @@ export async function getUserProfile(req: Request & IExtReq, res: Response) {
     }
 }
 
-export async function uploadUserPhoto(req: Request & IExtReq, res: Response) {     
-        const file = req.files!.photo as UploadedFile;
-        const fileType = file.name.split('.')[1];
-        const fileData = file.data
-        const fileName = `${req.user}.${fileType}`
+export async function uploadUserPhoto(req: Request & IExtReq, res: Response) {
+    const file = req.files!.photo as UploadedFile;
+    const fileType = file.name.split('.')[1];
+    const fileData = file.data
+    const fileName = `${req.user}.${fileType}`
 
-        const bucketParams = {
-            Bucket: process.env.AWS_S3_BUCKET,
-            Key: fileName,
-            Body: fileData
-        };
+    const bucketParams = {
+        Bucket: process.env.AWS_S3_BUCKET,
+        Key: fileName,
+        Body: fileData
+    };
 
-    try {  
+    try {
         const result = await s3Client.send(new PutObjectCommand(bucketParams));
         const s3ProfilePhotoUrl = `${s3BaseUrl}${bucketParams.Bucket}/${fileName}`;
 
-        try {    
+        try {
             const profile = await UserProfile.findOne({ user: req.user });
             if (!profile) throw { status: 404, message: "Profile not found" };
 
             profile.photo = s3ProfilePhotoUrl;
             await profile.save();
-            
+
             res.setHeader('Cache-Control', 'no-cache');
             return res.status(200).json({ photoUrl: s3ProfilePhotoUrl, message: 'Photo uploaded successfully' });
-            
+
         } catch (userError) {
             console.error('Error updating user profile photo:', userError);
             res.status(500).send('Error updating user profile photo');
@@ -77,5 +78,21 @@ export async function uploadUserPhoto(req: Request & IExtReq, res: Response) {
     } catch (s3Error) {
         console.error('Error uploading profile photo to AWS S3:', s3Error);
         res.status(500).send('Error uploading profile photo to AWS S3');
+    }
+}
+
+// profile + user info
+export async function getCurrentUser(req: Request & IExtReq, res: Response) {
+    try {
+        const profile = await UserProfile.findOne({ user: req.user });
+        const user = await User.findById(req.user);
+        if (!user || !profile) throw { status: 404, message: "User or profile not found" };
+        res.status(200).json({ user, profile });
+    } catch (error: any) {
+        if ('status' in error && 'message' in error) {
+            sendError(res, error as HTTPError);
+        } else {
+            return res.status(500).json({ message: error.message });
+        }
     }
 }
