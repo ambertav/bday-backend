@@ -132,11 +132,7 @@ export async function getFavoritesOfFriend(req: Request & IExtReq, res: Response
         if (!friend) throw { status: 404, message: "Friend not found" };
         if (friend?.user.toString() !== req.user?.toString()) throw { status: 403, message: "User not authorized for this request" }
         const favorites = await GiftRecommendation.find({ friend: friend._id });
-        if (favorites.length) {
-            res.status(200).json({ favorites });
-        } else {
-            res.status(204).json({});
-        }
+        res.status(200).json({favorites});
     } catch (error: any) {
         if ('status' in error && 'message' in error) {
             sendError(res, error as HTTPError);

@@ -97,7 +97,7 @@ describe("gift recommendation controller", () => {
         const response = await request(app)
             .get(`/api/friends/${friendId}/favorites`)
             .set('Authorization', `Bearer ${token}`)
-            .expect(204);
+            .expect(200);
     });
     it("should save a favorite gift", async () => {
         const req = {
@@ -132,6 +132,6 @@ describe("gift recommendation controller", () => {
         await request(app)
             .get(`/api/friends/${friendId}/favorites`)
             .set('Authorization', `Bearer ${token}`)
-            .expect(204);
+            .expect(200);
     });
 });

@@ -185,7 +185,7 @@ describe('DELETE /api/friends/:id/delete', () => {
             .delete(`/api/friends/${friend._id}/delete`)
             .set('Authorization', `Bearer ${token}`);
 
-        expect(response2.statusCode).toBe(204);
+        expect(response2.statusCode).toBe(200);
 
         const deletedFriend = await Friend.findById(friend._id);
         expect(deletedFriend).toBeNull();
@@ -240,7 +240,7 @@ describe('PUT /api/friends/:id/update', () => {
             .send(updateString)
             .set('Authorization', `Bearer ${token}`);
 
-        expect(stringResponse.statusCode).toBe(204);
+        expect(stringResponse.statusCode).toBe(200);
 
         const updatedFriend = await Friend.findById(friend._id);
         expect(updatedFriend?.name).toEqual(updateString.name);
@@ -251,7 +251,7 @@ describe('PUT /api/friends/:id/update', () => {
             .send(updateInterests)
             .set('Authorization', `Bearer ${token}`);
 
-        expect(interestsResponse.statusCode).toBe(204);
+        expect(interestsResponse.statusCode).toBe(200);
 
         const updatedInterestsFriend = await Friend.findById(friend._id);
         expect(updatedInterestsFriend?.interests).toEqual(updateInterests.interests);
@@ -262,7 +262,7 @@ describe('PUT /api/friends/:id/update', () => {
             .send(updateTags)
             .set('Authorization', `Bearer ${token}`);
 
-        expect(tagsResponse.statusCode).toBe(204);
+        expect(tagsResponse.statusCode).toBe(200);
 
         const updatedTagsFriend = await Friend.findById(friend._id);
         expect(updatedTagsFriend?.tags).toEqual(updateTags.tags);
@@ -364,7 +364,7 @@ describe("DELETE /api/friends/:id/tags/:tagId", () => {
         const response = await request(app)
             .delete(`/api/friends/${friend?._id}/tags/${unassociatedTagId}`)
             .set('Authorization', `Bearer ${token}`)
-            .expect(204);
+            .expect(200);
     });
 
     it("should not remove tag from a different user's friend", async () => {

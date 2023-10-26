@@ -85,7 +85,7 @@ export async function deleteFriend(req: Request & IExtReq, res: Response) {
 
         if (friend?.user.toString() === req.user?.toString()) { // verifies that friend is associated with logged in user
             const result = await Friend.findByIdAndDelete(friendId);
-            if (result) return res.status(204).json({ message: 'Friend deleted successfully' });
+            if (result) return res.status(200).json({ message: 'Friend deleted successfully' });
         }
 
         return res.status(403).json({ message: 'User not authorized for this request' });
@@ -115,7 +115,7 @@ export async function updateFriend(req: Request & IExtReq, res: Response) {
             delete updateFields.user; // so that it can't update the user
             delete updateFields.photo; // use photo upload endpoint instead
             const result = await Friend.updateOne({ _id: friendId }, { $set: updateFields });
-            if (result) return res.status(204).json({ message: 'Friend updated' });
+            if (result) return res.status(200).json({ message: 'Friend updated' });
         }
 
         return res.status(403).json({ message: 'User not authorized for this request' });
@@ -172,7 +172,7 @@ export async function removeTag(req: Request & IExtReq, res: Response) {
             await friend.save();
             return res.status(200).json({ message: "Tag removed" });
         } else {
-            return res.status(204).json({});
+            return res.status(200).json({});
         }
     } catch (error: any) {
         if ('status' in error && 'message' in error) {
