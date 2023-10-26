@@ -33,7 +33,7 @@ Generate gift recommendations based on input.
 export async function recommendGift(req: Request & IExtReq, res: Response) {
     try {
         if (rateLimiterOpenAI.isRateLimited('limit reached')) return res.status(429).json({ message: 'Limit reached, try again later' });
-        const friend = await Friend.findById(req.params.id);
+        const friend = await Friend.findById(req.params.id)
         if (!friend) throw { status: 404, message: "Friend not found" };
         if (friend?.user.toString() !== req.user?.toString()) throw { status: 403, message: "User not authorized for this request" }
 
