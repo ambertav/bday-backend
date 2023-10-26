@@ -50,7 +50,7 @@ export async function addFriend(req: Request & IExtReq, res: Response) {
 
 export async function findFriends(req: Request & IExtReq, res: Response) {
     try {
-        const friends = await Friend.find({ user: req.user });
+        const friends = await Friend.find({ user: req.user }).populate("tags");
         if (friends.length > 0) return res.status(200).json(friends);
         else if (friends.length === 0) return res.status(200).json({ message: 'No friends found' });
 
@@ -64,7 +64,7 @@ export async function findFriends(req: Request & IExtReq, res: Response) {
 export async function showFriend(req: Request & IExtReq, res: Response) {
     try {
         const friendId = req.params.id;
-        const friend = await Friend.findOne({ _id: friendId, user: req.user });
+        const friend = await Friend.findOne({ _id: friendId, user: req.user }).populate("tags");
         if (!friend) return res.status(404).json('Friend not found');
 
         return res.status(200).json(friend);
@@ -188,7 +188,7 @@ export async function addPreference(req: Request & IExtReq, res: Response) {
         const friendId = req.params.id;
         let { preference } = req.body;
         preference = preference.toLowerCase();
-        const friend = await Friend.findById(friendId);
+        const friend = await Friend.findById(friendId).populate("tags");
         if (!friend) {
             throw { status: 404, message: 'Friend not found' };
         }
@@ -211,7 +211,7 @@ export async function removePreference(req: Request & IExtReq, res: Response) {
         const friendId = req.params.id;
         let { preference } = req.body;
         preference = preference.toLowerCase();
-        const friend = await Friend.findById(friendId);
+        const friend = await Friend.findById(friendId).populate("tags");
         if (!friend) {
             throw { status: 404, message: 'Friend not found' };
         }
