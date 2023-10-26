@@ -27,7 +27,7 @@ Generate gift recommendations based on input.
         "title": "title of the gift idea. Should be short. This title will be used to search online shopping channels",
         "reason": "a very short reasoning. Should be one senctence in the form of 'because [subject] [verb] [object]', i.e. 'because she loves her puppy'",
         "imageSearchQuery": "a simple short query to search for a thumbnail image representative of this gift idea",
-        "estimatedCost": "An estimate cost in US Dollars. Does not have to be accurate"
+        "estimatedCost": "An estimate cost in US Dollars. Does not have to be accurate. MUST BE '$' followed by a number."
     }
 ]`
 export async function recommendGift(req: Request & IExtReq, res: Response) {
