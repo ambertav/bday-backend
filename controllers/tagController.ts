@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'; 
 import mongoose from 'mongoose';
-import Tag, { IFriendDocument } from '../models/friend';
+import Tag from '../models/tag';
 import { IExtReq } from '../interfaces/auth';
 
 
