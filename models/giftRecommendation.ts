@@ -6,7 +6,7 @@ const giftRecommendationSchema = new mongoose.Schema({
     reason: String,
     imageSearchQuery: String,
     giftType: String,
-    estimatedCost: Number,
+    estimatedCost: String,
     friend: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Friend' }
 },
 {
