@@ -85,18 +85,19 @@ export async function recommendGift(req: Request & IExtReq, res: Response) {
 
 export async function favoriteGift(req: Request & IExtReq, res: Response) {
     try {
-        const { title, reason, imgSrc, imageSearchQuery, giftType } = req.body;
+        const { title, reason, imgSrc, imageSearchQuery, giftType, estimatedCost } = req.body;
         const friendId = req.params.id;
         const friend = await Friend.findById(friendId);
         if (!friend) throw { status: 404, message: "Friend not found" };
         if (friend?.user.toString() !== req.user?.toString()) throw { status: 403, message: "User not authorized for this request" }
-        if (!title || !reason || !imgSrc || !imageSearchQuery || !giftType) throw { status: 400, message: "Missing information" };
+        if (!title || !reason || !imgSrc || !imageSearchQuery || !giftType || !estimatedCost) throw { status: 400, message: "Missing information" };
         const recommendation = await GiftRecommendation.create({
             title,
             reason,
             image: imgSrc,
             imageSearchQuery,
             giftType,
+            estimatedCost,
             friend: friend._id
         });
         res.status(201).json({ recommendation });
