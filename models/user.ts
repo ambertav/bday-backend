@@ -33,6 +33,9 @@ const userSchema = new mongoose.Schema({
     toJSON: {
         transform: function (_, ret) {
             delete ret.passwordHash;
+            if (ret.dob instanceof Date) {
+                ret.dob = ret.dob.toISOString().split('T')[0]; // Format date as 'yyyy-mm-dd'
+            }
         }
     }
 });
