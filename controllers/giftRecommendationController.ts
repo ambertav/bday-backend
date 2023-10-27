@@ -13,6 +13,7 @@ Generate gift recommendations based on input.
 **CONSTRAINTS**
 + You will be given an input in the input format. Base your recommendations on the provided input.
 + Be specific in your recommendations. Do NOT just recommend "concert tickets" or "donation to charity". Be more specific.
++ Recommendations must adhere to person's giftTypes preferences. If someone wants present, they want a tangible product. Don't recommend donations or concert tickets to them.
 + You must only and exactly reply in the desired OUTPUT FORMAT. OUTPUT must include 3 gift ideas. Only reply as an array of JSON Objects as described in OUTPUT FORMAT
 **INPUT FORMAT**
 {
