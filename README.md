@@ -231,6 +231,7 @@ Note: tagId must be a valid, existing tag's Id. If the friend's tags array does 
   - `title` (required, string)
   - `reason` (required, string)
   - `imgSrc` (required, string - link of thumbnail image)
+  - `giftType` (required, string - one of 'present', 'experience' or 'donation')
   - `imageSearchQuery` (required, string - query used to find thumbnail image)
 **Response**: JSON object containing:
   - `recommendation` (with ObjectId)

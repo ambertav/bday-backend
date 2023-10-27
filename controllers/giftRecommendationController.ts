@@ -27,7 +27,8 @@ Generate gift recommendations based on input.
         "title": "title of the gift idea. Should be short. This title will be used to search online shopping channels",
         "reason": "a very short reasoning. Should be one senctence in the form of 'because [subject] [verb] [object]', i.e. 'because she loves her puppy'",
         "imageSearchQuery": "a simple short query to search for a thumbnail image representative of this gift idea",
-        "estimatedCost": "An estimate cost in US Dollars. Does not have to be accurate. MUST BE '$' followed by a number."
+        "estimatedCost": "An estimate cost in US Dollars. Does not have to be accurate. MUST BE '$' followed by a number.",
+        "giftType": "What type of gift is this? MUST BE one of 'present', 'donation' or 'experience'"
     }
 ]`
 export async function recommendGift(req: Request & IExtReq, res: Response) {
@@ -83,17 +84,18 @@ export async function recommendGift(req: Request & IExtReq, res: Response) {
 
 export async function favoriteGift(req: Request & IExtReq, res: Response) {
     try {
-        const { title, reason, imgSrc, imageSearchQuery } = req.body;
+        const { title, reason, imgSrc, imageSearchQuery, giftType } = req.body;
         const friendId = req.params.id;
         const friend = await Friend.findById(friendId);
         if (!friend) throw { status: 404, message: "Friend not found" };
         if (friend?.user.toString() !== req.user?.toString()) throw { status: 403, message: "User not authorized for this request" }
-        if (!title || !reason || !imgSrc || !imageSearchQuery) throw { status: 400, message: "Missing information" };
+        if (!title || !reason || !imgSrc || !imageSearchQuery || !giftType) throw { status: 400, message: "Missing information" };
         const recommendation = await GiftRecommendation.create({
             title,
             reason,
             image: imgSrc,
             imageSearchQuery,
+            giftType,
             friend: friend._id
         });
         res.status(201).json({ recommendation });
