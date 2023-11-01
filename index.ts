@@ -27,7 +27,8 @@ export const configureApp = (middleware?: any[]) => {
     app.use(fileUpload());
 
     app.use(cors({
-        origin: ["https://ga-oct-hackathon-team-3.github.io/", "http://localhost:3000"]
+        origin: ["https://ga-oct-hackathon-team-3.github.io/", "http://localhost:3000"],
+        credentials: true
     }));
 
     if (middleware) {
