@@ -40,6 +40,11 @@ export const configureApp = (middleware?: any[]) => {
     app.use('/api/users/profile', userProfileRoute);
     app.use('/api/tags', tagsRoute);
 
+    app.use((req,res,next)=>{
+        res.set('Access-Control-Allow-Credentials', 'true');
+        next();
+    });
+
     return app;
 }
 
