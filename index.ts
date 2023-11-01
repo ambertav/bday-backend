@@ -26,7 +26,9 @@ export const configureApp = (middleware?: any[]) => {
     app.use(sanitize());
     app.use(fileUpload());
 
-    app.use(cors());
+    app.use(cors({
+        origin: "https://ga-oct-hackathon-team-3.github.io/"
+    }));
 
     if (middleware) {
         app.use(middleware);
