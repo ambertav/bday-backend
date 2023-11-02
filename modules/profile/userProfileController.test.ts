@@ -3,7 +3,7 @@ import path from "path";
 import mongoose from "mongoose";
 import request from 'supertest';
 import User from "../user/models/user";
-import * as userCtrl from '../user/userController';
+import * as userCtrl from '../user/controllers/userController';
 import { configureApp } from '../../index';
 import bearer from "../../middleware/bearer";
 import { toSeconds } from "../../utilities/utils";

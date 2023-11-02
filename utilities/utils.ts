@@ -58,3 +58,13 @@ export async function fetchImageThumbnail(query: string, apiKey: string) {
         return null;
     }
 }
+
+export function handleError(res:Response, error: any){
+    if ('status' in error && 'message' in error) {
+        sendError(res, error as HTTPError);
+    }else if ('message' in error){
+        res.status(500).json({message: error.message});
+    } else {
+        res.status(500).json({ message: "Internal server error" });
+    }
+}

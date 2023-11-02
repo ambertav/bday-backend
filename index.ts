@@ -6,7 +6,7 @@ import cors from 'cors';
 import fileUpload from 'express-fileupload';
 import sanitize from 'express-mongo-sanitize';
 import bearer from './middleware/bearer';
-import usersRoute from './modules/user/usersRoute';
+import usersRoute from './modules/user/routes/usersRoute';
 import friendsRoute from './modules/friends/friendsRoute';
 import userProfileRoute from './modules/profile/userProfileRoute';
 import tagsRoute from './modules/tags/tagsRoute';

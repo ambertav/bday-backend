@@ -1,10 +1,11 @@
 import { Request, Response } from "express";
 import jwt, { Secret } from 'jsonwebtoken';
-import { IChangePasswordRequest, IExtReq, ILoginRequest, ISignupRequest } from "../../interfaces/auth";
-import User, { IUserDocument } from "./models/user";
-import { IUserDetails } from "../../interfaces/user";
-import userProfile from "../profile/models/userProfile";
-import { HTTPError, sendError } from "../../utilities/utils";
+import { IChangePasswordRequest, IExtReq, ILoginRequest, ISignupRequest } from "../../../interfaces/auth";
+import User, { IUserDocument } from "../models/user";
+import { IUserDetails } from "../../../interfaces/user";
+import userProfile from "../../profile/models/userProfile";
+import { HTTPError, handleError, sendError } from "../../../utilities/utils";
+import * as signupService from '../services/signupService';
 
 const { AUTH_JWT_SECRET, AUTH_JWT_EXPIRE, CONFIRM_DELETE_EXPIRE } = process.env;
 
@@ -123,7 +124,7 @@ export async function confirmDeleteUser(req: Request & IExtReq, res: Response) {
 
         await user.deleteOne();
         // TODO: Clean other records belonging to user, such as friends, profile, etc.
-        await userProfile.deleteMany({user: user._id});
+        await userProfile.deleteMany({ user: user._id });
 
         res.status(200).json({ message: "User deleted" });
     } catch (error: any) {
@@ -135,26 +136,39 @@ export async function confirmDeleteUser(req: Request & IExtReq, res: Response) {
     }
 }
 
+// export async function signup(req: Request, res: Response) {
+//     try {
+//         const { email, password, name, tel, dob, gender }: ISignupRequest = req.body;
+
+//         const existingUser = await User.findOne({ email });
+//         if (existingUser) throw { status: 400, message: "Email already in use" };
+
+//         const user: IUserDocument = new User({ email, passwordHash: password, name, tel, dob, gender });
+
+//         await user.save();
+
+//         // TODO: Send activation/verification e-mail?
+
+//         res.status(201).json({ message: "User successfully created", accessToken: createJwt(user._id) });
+//     } catch (error: any) {
+//         if ('status' in error && 'message' in error) {
+//             sendError(res, error as HTTPError);
+//         } else {
+//             res.status(500).json({ message: "Internal server error" });
+//         }
+//     }
+// }
+
 export async function signup(req: Request, res: Response) {
     try {
-        const { email, password, name, tel, dob, gender }: ISignupRequest = req.body;
-
-        const existingUser = await User.findOne({ email });
+        const data: ISignupRequest = req.body;
+        const existingUser = await User.findOne({ email: data.email });
         if (existingUser) throw { status: 400, message: "Email already in use" };
-
-        const user: IUserDocument = new User({ email, passwordHash: password, name, tel, dob, gender });
-
-        await user.save();
-
-        // TODO: Send activation/verification e-mail?
-
-        res.status(201).json({ message: "User successfully created", accessToken: createJwt(user._id) });
+        const id = await signupService.signup(data);
+        res.status(201).json({ message: "User successfully created", accessToken: createJwt(id) });
     } catch (error: any) {
-        if ('status' in error && 'message' in error) {
-            sendError(res, error as HTTPError);
-        } else {
-            res.status(500).json({ message: "Internal server error" });
-        }
+        console.error(error);
+        handleError(res, error);
     }
 }
 
