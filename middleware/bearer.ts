@@ -39,7 +39,11 @@ export default async (req: Request & IExtReq, res: Response, next: NextFunction)
                     } catch (innerError) {
                         return handleError(res, innerError);
                     }
+                }else{
+                    console.error("No refresh token");
                 }
+            }else{
+                handleError(res, {status:401, message: "Invalid token"});
             }
         }
     }
