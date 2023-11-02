@@ -1,8 +1,8 @@
-import { HTTPError, fetchImageThumbnail, sendError, rateLimiterOpenAI } from "../utilities/utils";
-import GiftRecommendation from "../models/giftRecommendation";
+import { HTTPError, fetchImageThumbnail, sendError, rateLimiterOpenAI } from "../../utilities/utils";
+import GiftRecommendation from "./models/giftRecommendation";
 import { Request, Response } from "express";
-import Friend from "../models/friend";
-import { IExtReq } from "../interfaces/auth";
+import Friend from "../friends/models/friend";
+import { IExtReq } from "../../interfaces/auth";
 
 import OpenAI from 'openai';
 const openai = new OpenAI();

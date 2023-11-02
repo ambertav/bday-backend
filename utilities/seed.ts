@@ -1,6 +1,6 @@
 require('dotenv').config();
 require('./db');
-import Tag from "../models/tag";
+import Tag from "../modules/tags/models/tag";
 
 
 (async ()=>{

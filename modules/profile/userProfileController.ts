@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
-import UserProfile from "../models/userProfile";
-import User from "../models/user";
-import { HTTPError, sendError } from "../utilities/utils";
-import { IUserProfileDetails } from "../interfaces/userProfile";
-import { IExtReq } from "../interfaces/auth";
-import { s3Client, s3BaseUrl, PutObjectCommand } from '../utilities/s3upload';
+import UserProfile from "./models/userProfile";
+import User from "../user/models/user";
+import { HTTPError, sendError } from "../../utilities/utils";
+import { IUserProfileDetails } from "../../interfaces/userProfile";
+import { IExtReq } from "../../interfaces/auth";
+import { s3Client, s3BaseUrl, PutObjectCommand } from '../../utilities/s3upload';
 import { UploadedFile } from 'express-fileupload';
 
 export async function updateProfileDetails(req: Request & IExtReq, res: Response) {

@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import User from "./user";
-import userProfile from "./userProfile";
+import userProfile from "../../profile/models/userProfile";
 
 declare global {
     var __MONGO_URI__: string;

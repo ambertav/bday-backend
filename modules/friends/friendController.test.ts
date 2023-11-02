@@ -1,12 +1,12 @@
 import mongoose from 'mongoose';
 import request from 'supertest';
-import { configureApp } from '../index';
-import bearer from '../middleware/bearer';
+import { configureApp } from '../../index';
+import bearer from '../../middleware/bearer';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 
-import Friend from "../models/friend";
-import User from '../models/user';
-import Tag from '../models/tag';
+import Friend from "./models/friend";
+import User from '../user/models/user';
+import Tag from '../tags/models/tag';
 const app = configureApp([bearer]);
 
 

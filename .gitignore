@@ -92,10 +92,7 @@ tmp
 # .ruby-version
 # .ruby-gemset
 
-# CTags #
-#########
-tags
-
+!tags
 # Env #
 #######
 .env

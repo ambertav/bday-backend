@@ -27,4 +27,5 @@ export interface ISignupRequest{
     dob: Date;
     gender: string;
     tel?: number;
+    location?: string;
 }

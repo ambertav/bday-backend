@@ -1,13 +1,13 @@
 import mongoose from 'mongoose';
 import request from 'supertest';
-import { configureApp } from '../index';
-import bearer from '../middleware/bearer';
+import { configureApp } from '../../index';
+import bearer from '../../middleware/bearer';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 
-import Friend from "../models/friend";
-import User from '../models/user';
-import Tag from '../models/tag';
-import giftRecommendation from '../models/giftRecommendation';
+import Friend from "../friends/models/friend";
+import User from '../user/models/user';
+import Tag from '../tags/models/tag';
+import giftRecommendation from './models/giftRecommendation';
 
 
 let token: string;

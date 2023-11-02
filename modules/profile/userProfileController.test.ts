@@ -2,14 +2,14 @@ require('dotenv').config();
 import path from "path";
 import mongoose from "mongoose";
 import request from 'supertest';
-import User from "../models/user";
-import * as userCtrl from './userController';
-import { configureApp } from '../index';
-import bearer from "../middleware/bearer";
-import { toSeconds } from "../utilities/utils";
-import userProfile from "../models/userProfile";
+import User from "../user/models/user";
+import * as userCtrl from '../user/controllers/userController';
+import { configureApp } from '../../index';
+import bearer from "../../middleware/bearer";
+import { toSeconds } from "../../utilities/utils";
+import userProfile from "./models/userProfile";
 import jwt, { JwtPayload } from "jsonwebtoken";
-import friend from "../models/friend";
+import friend from "../friends/models/friend";
 
 const app = configureApp([bearer]);
 

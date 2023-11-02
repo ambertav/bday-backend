@@ -1,6 +1,6 @@
 import { Router } from "express";
-import * as userProfileCtrl from '../controllers/userProfileController';
-import requireLogin from "../middleware/requireLogin";
+import * as userProfileCtrl from './userProfileController';
+import requireLogin from "../../middleware/requireLogin";
 
 const router = Router();
 

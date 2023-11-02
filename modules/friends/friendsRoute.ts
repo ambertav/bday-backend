@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import * as friendCtrl from '../controllers/friendController';
-import * as giftCtrl from '../controllers/giftRecommendationController';
-import requireLogin from '../middleware/requireLogin';
+import * as friendCtrl from './friendController';
+import * as giftCtrl from '../recommendation/giftRecommendationController';
+import requireLogin from '../../middleware/requireLogin';
 
 const router = Router();
 
