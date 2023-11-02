@@ -22,7 +22,7 @@ export async function loginLocal(req: Request, res: Response) {
             // const accessToken = createJwt(user._id);
             // return res.status(200).json({ accessToken });
             const tokens = await handleTokens(user._id);
-            res.cookie("refreshToken", tokens.refreshToken, { signed: true, httpOnly: true, sameSite: 'none' });
+            res.cookie("refreshToken", tokens.refreshToken, { signed: true, httpOnly: true, sameSite: 'none', secure:true });
             res.status(200).json({ ...tokens });
         } else {
             throw { status: 401, message: "Invalid credentials" };
@@ -174,7 +174,7 @@ export async function signup(req: Request, res: Response) {
         const id = await signupService.signup(data);
         if (!id) throw { status: 400, message: "User not created" };
         const tokens = await handleTokens(id!);
-        res.cookie("refreshToken", tokens.refreshToken, { signed: true, httpOnly: true, sameSite: "none" });
+        res.cookie("refreshToken", tokens.refreshToken, { signed: true, httpOnly: true, sameSite: "none", secure: true });
         res.status(201).json({ message: "User successfully created", ...tokens });
     } catch (error: any) {
         handleError(res, error);

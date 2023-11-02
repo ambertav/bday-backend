@@ -28,7 +28,9 @@ export default async (req: Request & IExtReq, res: Response, next: NextFunction)
                         // Set the new refresh token in an http-only cookie
                         res.cookie('refreshToken', tokens?.refreshToken, {
                             httpOnly: true,
-                            signed: true
+                            signed: true,
+                            sameSite: 'none',
+                            secure: true
                         });
                         // Set the new access token in the 'x-access-token' header
                         res.setHeader('x-access-token', tokens?.accessToken!);
@@ -39,11 +41,11 @@ export default async (req: Request & IExtReq, res: Response, next: NextFunction)
                     } catch (innerError) {
                         return handleError(res, innerError);
                     }
-                }else{
+                } else {
                     console.error("No refresh token");
                 }
-            }else{
-                handleError(res, {status:401, message: "Invalid token"});
+            } else {
+                handleError(res, { status: 401, message: "Invalid token" });
             }
         }
     }
