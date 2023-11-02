@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 import request from 'supertest';
-import { configureApp } from '../index';
-import bearer from '../middleware/bearer';
+import { configureApp } from '../../index';
+import bearer from '../../middleware/bearer';
 
-import Tag from '../models/tag';
+import Tag from './models/tag';
 import { getTags } from './tagController';
 
 const app = configureApp([bearer]);

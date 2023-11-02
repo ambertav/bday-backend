@@ -1,7 +1,7 @@
 import { Request, Response } from 'express'; 
 import mongoose from 'mongoose';
-import Tag from '../models/tag';
-import { IExtReq } from '../interfaces/auth';
+import Tag from './models/tag';
+import { IExtReq } from '../../interfaces/auth';
 
 
 export async function getTags (req : Request & IExtReq, res : Response) {

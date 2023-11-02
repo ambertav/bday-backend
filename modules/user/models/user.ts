@@ -1,6 +1,6 @@
 import mongoose, { CallbackError } from "mongoose";
-import { compareHash, hashString } from "../utilities/cryptoService";
-import userProfileSchema from "./userProfileSchema";
+import { compareHash, hashString } from "../../../utilities/cryptoService";
+import userProfileSchema from "../../profile/models/userProfileSchema";
 
 const userSchema = new mongoose.Schema({
     email: {

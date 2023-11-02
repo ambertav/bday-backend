@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import Friend, { IFriendDocument } from '../models/friend';
-import { IExtReq } from '../interfaces/auth';
-import { HTTPError, sendError } from '../utilities/utils';
-import Tag from '../models/tag';
+import Friend, { IFriendDocument } from './models/friend';
+import { IExtReq } from '../../interfaces/auth';
+import { HTTPError, sendError } from '../../utilities/utils';
+import Tag from '../tags/models/tag';
 import { UploadedFile } from 'express-fileupload';
-import { PutObjectCommand, s3BaseUrl, s3Client } from '../utilities/s3upload';
+import { PutObjectCommand, s3BaseUrl, s3Client } from '../../utilities/s3upload';
 
 
 interface IFriendRequest {

@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import Friend from "./friend";
-import User from "./user";
+import User from "../../user/models/user";
 
 const now = new Date();
 let userId: string;

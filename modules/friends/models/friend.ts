@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
-import Gift from './gift';
-import { GIFT_PREFERENCES } from '../utilities/constants';
+import { GIFT_PREFERENCES } from '../../../utilities/constants';
 
 const friendSchema = new mongoose.Schema({
     name: {
@@ -74,18 +73,6 @@ friendSchema.pre('save', function (next) {
         return next(error);
     }
     next();
-});
-
-friendSchema.pre('deleteOne', async function (next) {
-    // removing all gift recommendation references on deletion of friend
-    const doc = await this.model.findOne(this.getFilter());
-    try {
-        await Gift.deleteMany({ friend: doc._id });
-        next();
-    } catch (error : any) {
-        console.error('Error deleting gift recommendations:', error);
-        next(error);
-    }
 });
 
 export interface IFriendDocument extends mongoose.Document {

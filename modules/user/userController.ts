@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
 import jwt, { Secret } from 'jsonwebtoken';
-import { IChangePasswordRequest, IExtReq, ILoginRequest, ISignupRequest } from "../interfaces/auth";
-import User, { IUserDocument } from "../models/user";
-import { IUserDetails } from "../interfaces/user";
-import userProfile from "../models/userProfile";
-import { HTTPError, sendError } from "../utilities/utils";
+import { IChangePasswordRequest, IExtReq, ILoginRequest, ISignupRequest } from "../../interfaces/auth";
+import User, { IUserDocument } from "./models/user";
+import { IUserDetails } from "../../interfaces/user";
+import userProfile from "../profile/models/userProfile";
+import { HTTPError, sendError } from "../../utilities/utils";
 
 const { AUTH_JWT_SECRET, AUTH_JWT_EXPIRE, CONFIRM_DELETE_EXPIRE } = process.env;
 
