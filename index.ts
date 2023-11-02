@@ -3,6 +3,7 @@ import path from 'path';
 import express from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import fileUpload from 'express-fileupload';
 import sanitize from 'express-mongo-sanitize';
 import bearer from './middleware/bearer';
@@ -25,6 +26,7 @@ export const configureApp = (middleware?: any[]) => {
     app.use(express.static(path.join(__dirname, 'build')));
     app.use(sanitize());
     app.use(fileUpload());
+    app.use(cookieParser(process.env.COOKIE_SECRET));
 
     app.use(cors({
         origin: ["https://ga-oct-hackathon-team-3.github.io/", "http://localhost:3000"],
@@ -40,11 +42,6 @@ export const configureApp = (middleware?: any[]) => {
 
     app.use('/api/users/profile', userProfileRoute);
     app.use('/api/tags', tagsRoute);
-
-    app.use((req,res,next)=>{
-        res.set('Access-Control-Allow-Credentials', 'true');
-        next();
-    });
 
     return app;
 }
