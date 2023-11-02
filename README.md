@@ -28,7 +28,6 @@ Server runs on PORT 3010 by default.
   - `tel` (optional, number)
 - **Response**: JSON object containing:
   - `accessToken`
-- **Side Effect**: Creates an empty UserProfile
 
 ### Login - Authenticate an existing user
 
@@ -79,11 +78,10 @@ Server runs on PORT 3010 by default.
 
 ## User Profile
 
-### Get Current User and Profile
-- **Endpoint**: `GET /api/users/profile/all`
+### Get Current User Profile
+- **Endpoint**: `GET /api/users/profile`
 - **Authorization**: Bearer Token
 - **Response**: JSON object containing:
-  - `user`
   - `profile`
 
 ### Update Profile Details
@@ -95,13 +93,6 @@ Server runs on PORT 3010 by default.
   - `bio` (optional, string)
 - **Response**: JSON object containing:
   - `message: "User profile updated"`
-  - `profile`
-
-### Get User Profile
-
-- **Endpoint**: `GET /api/users/profile`
-- **Authorization**: Bearer Token
-- **Response**: JSON object containing:
   - `profile`
 
 ### Upload User Photo
@@ -187,7 +178,7 @@ Note: tags and giftPreferences are not checked for duplicate entries at this end
 - **Response**: JSON object containing:
   - `_id` (objectId of added tag)
 
-Note: A new tag is created if title-type combinatino does not exist. If friend already has this combination, the existing tag's objectId is returned.
+Note: A new tag is created if title-type combination does not exist. If friend already has this combination, the existing tag's objectId is returned.
 
 ### Remove A Tag
 - **Endpoint**: `DELETE /api/friends/:id/tags/:tagId`
