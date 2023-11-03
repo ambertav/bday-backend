@@ -5,4 +5,5 @@ export interface IUserProfileDetails {
     gender?: string;
     tel?: number;
     location?: string;
+    name?: string;
 }

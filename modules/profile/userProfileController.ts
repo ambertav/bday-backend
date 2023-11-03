@@ -10,7 +10,7 @@ import { UploadedFile } from 'express-fileupload';
 export async function updateProfileDetails(req: Request & IExtReq, res: Response) {
     try {
         const details: Partial<IUserProfileDetails> = req.body;
-        const allowedKeys: (keyof IUserProfileDetails)[] = ['interests', 'bio', 'dob', 'gender', 'location', 'tel'];
+        const allowedKeys: (keyof IUserProfileDetails)[] = ['interests', 'bio', 'dob', 'gender', 'location', 'tel', 'name'];
         const profile = await UserProfile.findOne({ user: req.user });
         if (!profile) throw { status: 404, message: "Profile not found" };
 
