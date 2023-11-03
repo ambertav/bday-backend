@@ -3,7 +3,6 @@ import path from 'path';
 import express from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
-import cookieParser from 'cookie-parser';
 import fileUpload from 'express-fileupload';
 import sanitize from 'express-mongo-sanitize';
 import bearer from './middleware/bearer';
