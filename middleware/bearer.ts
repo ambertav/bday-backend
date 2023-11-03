@@ -39,7 +39,7 @@ export default async (req: Request & IExtReq, res: Response, next: NextFunction)
                         // Set user
                         req.user = (jwt.decode(tokens?.accessToken!) as JwtPayload).payload
                     } catch (innerError) {
-                        return handleError(res, innerError);
+                        //return handleError(res, innerError);
                     }
                 } else {
                     console.error("No refresh token");

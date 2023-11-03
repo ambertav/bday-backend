@@ -53,6 +53,11 @@ export function createRefreshToken(payload: any) {
  */
 export async function refreshTokens(accessToken: string, refreshToken: string): Promise<{ accessToken: string; refreshToken: string; } | undefined> {
     const key = digest(accessToken + "::" + refreshToken);
+    const storedPair = idempotencyCache.get(`idempotency:${key}`);
+        if (storedPair) {
+            // if found return parsed pair
+            return JSON.parse(storedPair as string);
+        }
     if (lockCache.get(key)) {
         throw new Error("Couldn't acquire lock");
     }
@@ -63,11 +68,7 @@ export async function refreshTokens(accessToken: string, refreshToken: string): 
         // verify signature on access token
         const decodedAccess = jwt.verify(accessToken, AUTH_JWT_SECRET as Secret, { ignoreExpiration: true });
         // check idempotency redis cache for stored token pair
-        const storedPair = idempotencyCache.get(`idempotency:${key}`);
-        if (storedPair) {
-            // if found return parsed pair
-            return JSON.parse(storedPair as string);
-        }
+        
         // check redis cache for stored refresh token
         const cachedToken = refreshTokenCache.get(`refresh:${(decodedAccess as JwtPayload).payload}`);
         let storedToken = cachedToken ? JSON.parse(cachedToken as string) : null;
