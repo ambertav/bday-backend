@@ -64,7 +64,7 @@ export async function findFriends(req: Request & IExtReq, res: Response) {
 export async function showFriend(req: Request & IExtReq, res: Response) {
     try {
         const friendId = req.params.id;
-        const friend = await Friend.findOne({ _id: friendId, user: req.user }).populate("tags");
+        const friend = await Friend.findOne({ _id: friendId, user: req.user }).populate("tags").populate("favoriteGifts");
         if (!friend) return res.status(404).json('Friend not found');
 
         return res.status(200).json(friend);
