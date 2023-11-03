@@ -3,7 +3,7 @@ export interface IUser {
 }
 
 export interface IExtReq {
-    user?: IUser | null;
+    user?: string | null;
 }
 
 export interface ILoginRequest{
