@@ -5,6 +5,7 @@ import Friend from "../friends/models/friend";
 import { IExtReq } from "../../interfaces/auth";
 
 import OpenAI from 'openai';
+import mongoose from "mongoose";
 const openai = new OpenAI();
 
 
@@ -85,6 +86,8 @@ export async function recommendGift(req: Request & IExtReq, res: Response) {
 }
 
 export async function favoriteGift(req: Request & IExtReq, res: Response) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     try {
         const { title, reason, imgSrc, imageSearchQuery, giftType, estimatedCost } = req.body;
         const friendId = req.params.id;
@@ -92,7 +95,8 @@ export async function favoriteGift(req: Request & IExtReq, res: Response) {
         if (!friend) throw { status: 404, message: "Friend not found" };
         if (friend?.user.toString() !== req.user?.toString()) throw { status: 403, message: "User not authorized for this request" }
         if (!title || !reason || !imgSrc || !imageSearchQuery || !giftType || !estimatedCost) throw { status: 400, message: "Missing information" };
-        const recommendation = await GiftRecommendation.create({
+        // provide as array to fix typing issue
+        const recommendation = await GiftRecommendation.create([{
             title,
             reason,
             image: imgSrc,
@@ -100,34 +104,57 @@ export async function favoriteGift(req: Request & IExtReq, res: Response) {
             giftType,
             estimatedCost,
             friend: friend._id
-        });
-        res.status(201).json({ recommendation });
+        }], { session });
+        friend.favoriteGifts.push(recommendation[0]._id);
+        await friend.save({ session });
+        await session.commitTransaction();
+        res.status(201).json({ recommendation: recommendation[0] });
     } catch (error: any) {
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
         if ('status' in error && 'message' in error) {
             sendError(res, error as HTTPError);
         } else {
             res.status(500).json({ message: "Internal server error" });
         }
+    } finally {
+        session.endSession();
     }
 }
 
 export async function removeFavorite(req: Request & IExtReq, res: Response) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     try {
         const friendId = req.params.id;
-        const favoriteId = req.params.favoriteId
-        const friend = await Friend.findById(friendId);
+        const favoriteId = req.params.favoriteId;
+
+        const friend = await Friend.findById(friendId).session(session);
         if (!friend) throw { status: 404, message: "Friend not found" };
-        if (friend?.user.toString() !== req.user?.toString()) throw { status: 403, message: "User not authorized for this request" }
-        const favorite = await GiftRecommendation.findById(favoriteId);
-        if (!favorite) throw { status: 404, message: "Gift not found" };
-        await favorite.deleteOne();
+        if (friend?.user.toString() !== req.user?.toString()) throw { status: 403, message: "User not authorized for this request" };
+
+        const favoriteIndex = friend.favoriteGifts.indexOf(new mongoose.Types.ObjectId(favoriteId));
+        if (favoriteIndex === -1) throw { status: 404, message: "Favorite gift not found in friend's favorites" };
+
+        friend.favoriteGifts.splice(favoriteIndex, 1);
+        await friend.save({ session });
+
+        await GiftRecommendation.deleteOne({ _id: favoriteId }).session(session);
+
+        await session.commitTransaction();
         res.status(200).json({ message: "Favorite gift removed" });
     } catch (error: any) {
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
         if ('status' in error && 'message' in error) {
             sendError(res, error as HTTPError);
         } else {
             res.status(500).json({ message: "Internal server error" });
         }
+    } finally {
+        session.endSession();
     }
 }
 
@@ -138,7 +165,7 @@ export async function getFavoritesOfFriend(req: Request & IExtReq, res: Response
         if (!friend) throw { status: 404, message: "Friend not found" };
         if (friend?.user.toString() !== req.user?.toString()) throw { status: 403, message: "User not authorized for this request" }
         const favorites = await GiftRecommendation.find({ friend: friend._id });
-        res.status(200).json({favorites});
+        res.status(200).json({ favorites });
     } catch (error: any) {
         if ('status' in error && 'message' in error) {
             sendError(res, error as HTTPError);

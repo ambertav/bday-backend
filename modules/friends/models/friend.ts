@@ -53,7 +53,11 @@ const friendSchema = new mongoose.Schema({
             },
             message: "Invalid gift type."
           }
-    }
+    },
+    favoriteGifts:[{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'GiftRecommendation',
+    }]
 }, {
     timestamps: true,
     toJSON: {
@@ -83,9 +87,10 @@ export interface IFriendDocument extends mongoose.Document {
     photo: string;
     bio: string;
     interests: string[];
-    tags: mongoose.Types.ObjectId[],
-    user: mongoose.Types.ObjectId,
+    tags: mongoose.Types.ObjectId[];
+    user: mongoose.Types.ObjectId;
     giftPreferences: string[];
+    favoriteGifts: mongoose.Types.ObjectId[];
 }
 
 export default mongoose.model <IFriendDocument> ('Friend', friendSchema);
