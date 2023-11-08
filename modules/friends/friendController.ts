@@ -79,13 +79,23 @@ export async function findFriends(req: Request & IExtReq, res: Response) {
               {
                 $project: { // removes unecessary fields, keeps daysUntilBirthday
                     today: 0,
-                    dobDayOfYear: 0
+                    dobDayOfYear: 0,
+              }
+            },
+              {
+                $set: { 
+                  'dob': { // transforms dob into string format, (toJSON not working with aggregation)
+                    $dateToString: {
+                      format: '%Y-%m-%d',
+                      date: '$dob'
+                    }
+                  }
                 }
               }
             ]);
-        
-            await Friend.populate(friends, { path: 'tags favoriteGifts' }); // populates tags and gifts
 
+        await Friend.populate(friends, { path: 'tags favoriteGifts' }); // populates tags and gifts
+        
         if (friends.length > 0) return res.status(200).json(friends);
         else if (friends.length === 0) return res.status(200).json({ message: 'No friends found' });
 
