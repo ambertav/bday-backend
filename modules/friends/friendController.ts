@@ -56,44 +56,90 @@ export async function findFriends(req: Request & IExtReq, res: Response) {
             },
             {
                 $addFields: {
-                  today: new Date(),
-                  dobDayOfYear: { $dayOfYear: '$dob' } // finds the numerical day of the year of friend's dob
-                }
-              },
-              {
-                $addFields: {
-                  daysUntilBirthday: {
-                    $cond: {
-                      if: { $gte: ['$dobDayOfYear', { $dayOfYear: '$today' }] }, // if day of year for dob is greater than or equal to today's...
-                      then: { $subtract: ['$dobDayOfYear', { $dayOfYear: '$today' }] }, // then subtracts for daysUntilBirthday
-                      else: { $add: [365, { $subtract: ['$dobDayOfYear', { $dayOfYear: '$today' }] }] } // if not, adds 365 then subtracts
-                    },
-                  }
-                }
-              },
-              {
-                $sort: {
-                  daysUntilBirthday: 1 // sorts by daysUntilBirthday
-                }
-              },
-              {
-                $project: { // removes unecessary fields, keeps daysUntilBirthday
-                    today: 0,
-                    dobDayOfYear: 0,
-              }
+                    today: new Date(),
+                    dobMonth: { $month: '$dob' },
+                    dobDay: { $dayOfMonth: '$dob' },
+                },
             },
-              {
+            {
+                $addFields: {
+                    nextBirthday: { // finds the next birthday with dob month, day and today's year
+                        $dateFromParts: {
+                            year: { $year: '$today' },
+                            month: '$dobMonth',
+                            day: '$dobDay',
+                        },
+                    },
+                },
+            },
+            {
+                $addFields: {
+                    nextBirthday: {
+                        $cond: {
+                            if: { $lt: ['$dobMonth', { $month: '$today' } ] }, // if the month is before today's month...
+                            then: {
+                                $dateFromParts: {
+                                    year: { $add: [{ $year: '$nextBirthday' }, 1] }, // add 1 year to next birthday
+                                    month: '$dobMonth',
+                                    day: '$dobDay',
+                                },
+                            },
+                            else: {
+                                $cond: {
+                                    if: { $and: [
+                                        { $eq: ['$dobMonth', { $month: '$today' } ] }, 
+                                        { $lt: ['$dobDay', { $dayOfMonth: '$today' } ] }, // if months are equal and dob day is less...
+                                    ] },
+                                    then: {
+                                        $dateFromParts: {
+                                        year: { $add: [{ $year: '$nextBirthday' }, 1] }, // add 1 year to next birthday
+                                        month: '$dobMonth',
+                                        day: '$dobDay',
+                                        },
+                                    },
+                                    else: '$nextBirthday',
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            {
+                $addFields: {
+                    daysUntilBirthday: {
+                        $dateDiff: { // find the dateDiff between today and the next birthday, return in number of days
+                            startDate: '$today',
+                            endDate: '$nextBirthday',
+                            unit: 'day',
+                        },
+                    },
+                },
+            },
+            {
+                $sort: {
+                    daysUntilBirthday: 1, // sort by daysUntilBirthday in ascending order
+                },
+            },
+            {
+                $project: { // removes unnecessary fields
+                    today: 0,
+                    dobMonth: 0,
+                    dobDay: 0,
+                    nextBirthday: 0,
+                },
+            },
+            {
                 $set: { 
-                  'dob': { // transforms dob into string format, (toJSON not working with aggregation)
-                    $dateToString: {
-                      format: '%Y-%m-%d',
-                      date: '$dob'
+                    'dob': { // transforms dob into string format, (toJSON not working with aggregation)
+                        $dateToString: {
+                            format: '%Y-%m-%d',
+                            date: '$dob'
+                        }
                     }
-                  }
                 }
-              }
-            ]);
-
+            }
+        ]);
+            
         await Friend.populate(friends, { path: 'tags favoriteGifts' }); // populates tags and gifts
         
         if (friends.length > 0) return res.status(200).json(friends);
