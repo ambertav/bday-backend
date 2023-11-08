@@ -50,7 +50,42 @@ export async function addFriend(req: Request & IExtReq, res: Response) {
 
 export async function findFriends(req: Request & IExtReq, res: Response) {
     try {
-        const friends = await Friend.find({ user: req.user }).populate("tags").populate("favoriteGifts");
+        const friends = await Friend.aggregate([
+            {
+              $match: { user: new mongoose.Types.ObjectId(req.user!) }, // searching for users friends
+            },
+            {
+                $addFields: {
+                  today: new Date(),
+                  dobDayOfYear: { $dayOfYear: '$dob' } // finds the numerical day of the year of friend's dob
+                }
+              },
+              {
+                $addFields: {
+                  daysUntilBirthday: {
+                    $cond: {
+                      if: { $gte: ['$dobDayOfYear', { $dayOfYear: '$today' }] }, // if day of year for dob is greater than or equal to today's...
+                      then: { $subtract: ['$dobDayOfYear', { $dayOfYear: '$today' }] }, // then subtracts for daysUntilBirthday
+                      else: { $add: [365, { $subtract: ['$dobDayOfYear', { $dayOfYear: '$today' }] }] } // if not, adds 365 then subtracts
+                    },
+                  }
+                }
+              },
+              {
+                $sort: {
+                  daysUntilBirthday: 1 // sorts by daysUntilBirthday
+                }
+              },
+              {
+                $project: { // removes unecessary fields, keeps daysUntilBirthday
+                    today: 0,
+                    dobDayOfYear: 0
+                }
+              }
+            ]);
+        
+            await Friend.populate(friends, { path: 'tags favoriteGifts' }); // populates tags and gifts
+
         if (friends.length > 0) return res.status(200).json(friends);
         else if (friends.length === 0) return res.status(200).json({ message: 'No friends found' });
 
