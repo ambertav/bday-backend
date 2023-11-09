@@ -245,3 +245,11 @@ Note: tagId must be a valid, existing tag's Id. If the friend's tags array does 
 - **Endpoint**: `GET /api/tags`
 - **Response**: JSON object containing:
   - `tag[]`
+
+## Device Info
+
+### Post Device Info
+- **Endpoint**: `POST /api/device`
+- **Response**: JSON object containing:
+  - `message: "Device token added"`
+*Note: Will hold one record per device token. If the same token is sent by another user, overwrites the record*

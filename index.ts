@@ -10,6 +10,7 @@ import usersRoute from './modules/user/routes/usersRoute';
 import friendsRoute from './modules/friends/friendsRoute';
 import userProfileRoute from './modules/profile/userProfileRoute';
 import tagsRoute from './modules/tags/tagsRoute';
+import deviceInfoRoute from './modules/notifications/deviceInfoRoute';
 import connectDB from './utilities/db';
 
 
@@ -37,6 +38,7 @@ export const configureApp = (middleware?: any[]) => {
 
     app.use('/api/users/profile', userProfileRoute);
     app.use('/api/tags', tagsRoute);
+    app.use('/api/device', deviceInfoRoute);
 
     return app;
 }
