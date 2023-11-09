@@ -33,7 +33,7 @@ const userProfileSchema = new mongoose.Schema({
         default: 'UTC',
         validate: {
             validator: function(v:string){
-                return moment.tz.names().includes(v.toLowerCase());
+                return moment.tz.names().includes(v);
             },
             message: (props: ValidatorProps) => `${props.value} is not a valid timezone!`
         }

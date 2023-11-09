@@ -19,7 +19,7 @@ export const signup = async (data: ISignupRequest): Promise<undefined | mongoose
             dob: data.dob,
             gender: data.gender,
             user: user._id,
-            timezone: data.timezone
+            timezone: data.timezone || 'UTC'
         });
         await user.save({ session });
         await profile.save({ session });
