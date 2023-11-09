@@ -26,6 +26,7 @@ Server runs on PORT 3010 by default.
   - `dob` (required, Date - yyyy-mm-dd)
   - `gender` (required, sring - one of "female", "male", "other")
   - `tel` (optional, number)
+  - `timezone` (optional, string)
 - **Response**: JSON object containing:
   - `accessToken`
 
@@ -50,16 +51,6 @@ Server runs on PORT 3010 by default.
 - **Request Body**: JSON object containing:
   - `oldPassword` (required, string)
   - `newPassword` (required, string)
-
-### Update User Information
-
-- **Endpoint**: `PUT /api/users`
-- **Authorization**: Bearer Token
-- **Request Body**: JSON object containing:
-  - `name` (optional, string)
-  - `tel` (optional, number)
-  - `dob` (optional, Date)
-  - `gender` (optional, sring - one of "female", "male", "other")
 
 ### Delete User
 
@@ -91,6 +82,14 @@ Server runs on PORT 3010 by default.
 - **Request Body**: JSON object containing (any of):
   - `interests` (optional, string[])
   - `bio` (optional, string)
+  - `timezone` (optional, string)
+  - `name` (optional, string)
+  - `tel` (optional, number)
+  - `gender` (optional, string)
+  - `dob` (optional, string)
+  - `timezone` (optional, string)
+  - `emailNotifications` (optional, boolean)
+  - `pushNotifications` (optional, boolean)
 - **Response**: JSON object containing:
   - `message: "User profile updated"`
   - `profile`
