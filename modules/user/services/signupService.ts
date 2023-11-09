@@ -18,7 +18,8 @@ export const signup = async (data: ISignupRequest): Promise<undefined | mongoose
             name: data.name,
             dob: data.dob,
             gender: data.gender,
-            user: user._id
+            user: user._id,
+            timezone: data.timezone || 'UTC'
         });
         await user.save({ session });
         await profile.save({ session });

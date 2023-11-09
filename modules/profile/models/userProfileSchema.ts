@@ -1,4 +1,5 @@
-import mongoose from 'mongoose';
+import mongoose, { ValidatorProps } from 'mongoose';
+import moment from 'moment-timezone';
 
 const userProfileSchema = new mongoose.Schema({
     name: {
@@ -26,6 +27,27 @@ const userProfileSchema = new mongoose.Schema({
         enum: ['male', 'female', 'other']
     },
     location: String,
+    timezone: {
+        type: String,
+        required: true,
+        default: 'UTC',
+        validate: {
+            validator: function(v:string){
+                return moment.tz.names().includes(v);
+            },
+            message: (props: ValidatorProps) => `${props.value} is not a valid timezone!`
+        }
+    },
+    emailNotifications: {
+        type: Boolean,
+        required: true,
+        default: false,
+    },
+    pushNotifications: {
+        type: Boolean,
+        required: true,
+        default: false
+    },
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",

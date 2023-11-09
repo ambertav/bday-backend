@@ -6,4 +6,7 @@ export interface IUserProfileDetails {
     tel?: number;
     location?: string;
     name?: string;
+    timezone?: string;
+    emailNotifications?: boolean;
+    pushNotifications?: boolean;
 }

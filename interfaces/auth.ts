@@ -28,4 +28,5 @@ export interface ISignupRequest{
     gender: string;
     tel?: number;
     location?: string;
+    timezone?: string;
 }
