@@ -229,7 +229,7 @@ export async function addTag(req: Request & IExtReq, res: Response) {
         type = type ? type.toLowerCase() : "custom";
         let existingTag = await Tag.findOne({ title });
         let tagCreated = false;
-        if (!existingTag || existingTag.type !== type) {
+        if (!existingTag) {
             existingTag = await Tag.create({ title, type });
             tagCreated = true;
         }
