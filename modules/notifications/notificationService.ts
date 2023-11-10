@@ -206,7 +206,7 @@ export async function sendExpoNotifications(list: IApproachingBirthday[]) {
     ticketCache.set(identifier, JSON.stringify(tickets));
     setTimeout(async () => {
         await handleExpoReceipts(identifier);
-    }, 60 * 1000);
+    }, 45 * 60 * 1000);
 }
 
 export async function handleExpoReceipts(identifier: string) {
