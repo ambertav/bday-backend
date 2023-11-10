@@ -7,7 +7,7 @@ export async function getDefaultTags (req : Request & IExtReq, res : Response) {
     try {
         const tags = await Tag.aggregate([
             {
-                $match: { type: { $ne: 'custom' } } // only retrieving default / non custom tags
+                $match: { type: { $in: ['relationship', 'hobby', 'gender', 'aesthetics'] } } // only retrieving default / non custom tags
             },
             {
                 $group: {
