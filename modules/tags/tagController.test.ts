@@ -4,7 +4,6 @@ import { configureApp } from '../../index';
 import bearer from '../../middleware/bearer';
 
 import Tag from './models/tag';
-import { getTags } from './tagController';
 
 const app = configureApp([bearer]);
 
