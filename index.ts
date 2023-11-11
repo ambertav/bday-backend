@@ -12,7 +12,7 @@ import userProfileRoute from './modules/profile/userProfileRoute';
 import tagsRoute from './modules/tags/tagsRoute';
 import deviceInfoRoute from './modules/notifications/deviceInfoRoute';
 import connectDB from './utilities/db';
-import { getApproachingBirthdays, sendExpoNotifications } from './modules/notifications/notificationService';
+import { getApproachingBirthdays, sendExpoNotifications, startAgenda } from './modules/notifications/notificationService';
 
 
 const DEBUG = process.env.NODE_ENV ? process.env.NODE_ENV.toLocaleLowerCase() !== 'production' : true; // Fix DEBUG logic
@@ -51,6 +51,8 @@ export const configureApp = (middleware?: any[]) => {
 }
 
 const app = configureApp([bearer]);
+
+(async () => await startAgenda())();
 
 if (!process.env.NODE_ENV || (process.env.NODE_ENV && process.env.NODE_ENV !== 'test')) {
     connectDB();
