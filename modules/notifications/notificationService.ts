@@ -4,6 +4,7 @@ import { ticketCache } from "../../utilities/cache";
 import userProfile from "../profile/models/userProfile";
 import notification from "./models/notification";
 import deviceInfo from "./models/deviceInfo";
+import Agenda from "agenda";
 
 export interface IApproachingBirthday {
     userId: string;
@@ -208,9 +209,9 @@ export async function sendExpoNotifications(list: IApproachingBirthday[]) {
                 if (ticket.status === 'ok' && ticket.id) {
                     const tkn = chunk[idx].to as string
                     ticketIDsToTokensMap.set(ticket.id, tkn);
-                    deviceInfo.findOne({deviceToken: tkn})
+                    deviceInfo.findOne({ deviceToken: tkn })
                         .then((device) => {
-                            if(device){
+                            if (device) {
                                 const index = pushList.findIndex(item => item.token === device.deviceToken)
                                 notification.create({
                                     userId: pushList[index].userId,
@@ -237,13 +238,16 @@ export async function sendExpoNotifications(list: IApproachingBirthday[]) {
     });
     await updateNotificationPreference(unregisterList);
 
+    // Removing receipt logic since I was unable to get an error response to examine
+    // and plan the receipt logic accordingly
+
     // set ticket cache
-    const identifier = Date.now().toString();
-    console.log('IDENTIFER, ', identifier);
-    ticketCache.set(identifier, JSON.stringify(ticketIDsToTokensMap, replacer));
-    setTimeout(async () => {
-        await handleExpoReceipts(identifier);
-    }, 15 * 60 * 1000);
+    // const identifier = Date.now().toString();
+    // console.log('IDENTIFER, ', identifier);
+    // ticketCache.set(identifier, JSON.stringify(ticketIDsToTokensMap, replacer));
+    // setTimeout(async () => {
+    //     await handleExpoReceipts(identifier);
+    // }, 15 * 60 * 1000);
 }
 
 async function updateNotificationPreference(token: string[]) {
@@ -325,4 +329,17 @@ function reviver(key: any, value: any) {
         }
     }
     return value;
+}
+
+export async function startAgenda() {
+    const agenda = new Agenda({ db: { address: process.env.DATABASE_URL!, collection: 'Jobs' } });
+    agenda.define('send birthday reminders', async () => {
+        console.log("Running birthday check");
+        const birthdays = await getApproachingBirthdays();
+        console.log("Sending push notifications");
+        await sendExpoNotifications(birthdays);
+        console.log('Done');
+    });
+    await agenda.start();
+    await agenda.every('12 hours', 'send birthday reminders');
 }
