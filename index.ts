@@ -40,12 +40,12 @@ export const configureApp = (middleware?: any[]) => {
     app.use('/api/users/profile', userProfileRoute);
     app.use('/api/tags', tagsRoute);
     app.use('/api/device', deviceInfoRoute);
-    // app.get('/test', async (req,res)=>{
-    //    const list = await getApproachingBirthdays();
-    //     await sendExpoNotifications(list);
-    //     res.json(list);
-    //     // res.json(await getApproachingBirthdays())
-    // })
+    app.get('/test', async (req,res)=>{
+       const list = await getApproachingBirthdays();
+        await sendExpoNotifications(list);
+        res.json(list);
+        // res.json(await getApproachingBirthdays())
+    })
 
     return app;
 }

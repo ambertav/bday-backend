@@ -5,7 +5,7 @@ const notificationSchema = new mongoose.Schema({
         type: String,
         required: true,
         enum: ['push', 'email'],
-        default: 'email'
+        default: 'push'
     },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
