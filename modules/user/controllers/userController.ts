@@ -16,7 +16,8 @@ const { AUTH_JWT_SECRET, AUTH_JWT_EXPIRE, CONFIRM_DELETE_EXPIRE } = process.env;
 
 export async function loginLocal(req: Request, res: Response) {
     try {
-        const { email, password }: ILoginRequest = req.body;
+        let { email, password }: ILoginRequest = req.body;
+        email = email.toLowerCase();
         const user: IUserDocument | null = await User.findOne({ email });
         if (user && await user.checkPassword(password)) {
             const accessToken = createJwt(user._id);
@@ -166,6 +167,7 @@ export async function confirmDeleteUser(req: Request & IExtReq, res: Response) {
 export async function signup(req: Request, res: Response) {
     try {
         const data: ISignupRequest = req.body;
+        data.email = data.email.toLowerCase();
         const existingUser = await User.findOne({ email: data.email });
         if (existingUser) throw { status: 400, message: "Email already in use" };
         const id = await signupService.signup(data);
