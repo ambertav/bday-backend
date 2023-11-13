@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as friendCtrl from './friendController';
 import * as giftCtrl from '../recommendation/giftRecommendationController';
 import requireLogin from '../../middleware/requireLogin';
+import allowOnlyImageUpload from '../../middleware/allowOnlyImageUpload';
 
 const router = Router();
 
@@ -14,7 +15,7 @@ router.post('/:id/tags', requireLogin, friendCtrl.addTag);
 router.delete('/:id/tags/:tagId', requireLogin, friendCtrl.removeTag);
 router.post('/:id/preferences', requireLogin, friendCtrl.addPreference);
 router.post('/:id/preferences/remove', requireLogin, friendCtrl.removePreference);
-router.post('/:id/upload', requireLogin, friendCtrl.uploadFriendPhoto);
+router.post('/:id/upload', requireLogin, allowOnlyImageUpload, friendCtrl.uploadFriendPhoto);
 router.post('/:id/generate-gift', requireLogin, giftCtrl.recommendGift);
 router.post('/:id/favorites', requireLogin, giftCtrl.favoriteGift);
 router.get('/:id/favorites', requireLogin, giftCtrl.getFavoritesOfFriend);
