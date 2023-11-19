@@ -93,4 +93,9 @@ export interface IFriendDocument extends mongoose.Document {
     favoriteGifts: mongoose.Types.ObjectId[];
 }
 
+export interface IFriendResult extends IFriendDocument {
+    daysUntilBirthday: number,
+    cardColor: string | null,
+}
+
 export default mongoose.model <IFriendDocument> ('Friend', friendSchema);
