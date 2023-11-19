@@ -15,7 +15,7 @@ export async function cleanTags () {
             },
             {
                 // filtering to return tags in which the array is empty (the tags that are not referenced)
-                $match: { taggedFriends: { $size: 0 } } 
+                $match: { taggedFriends: { $size: 0 }, type: 'custom' } 
             },
             {
                 $project: {
