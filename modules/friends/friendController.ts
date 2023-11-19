@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import Friend, { IFriendDocument } from './models/friend';
+import UserProfile from '../profile/models/userProfile';
+import moment from 'moment-timezone';
 import { IExtReq } from '../../interfaces/auth';
 import { HTTPError, sendError } from '../../utilities/utils';
 import Tag from '../tags/models/tag';
@@ -50,6 +52,11 @@ export async function addFriend(req: Request & IExtReq, res: Response) {
 
 export async function findFriends(req: Request & IExtReq, res: Response) {
     try {
+        // find user's timezone to incorporate to daysUntilBirthday calculation
+        const userProfile = await UserProfile.findOne({ user: req.user }).select('timezone');
+        let timezone = userProfile?.timezone;
+        if (!timezone) timezone = 'UTC';
+
         const friends = await Friend.aggregate([
             {
               $match: { user: new mongoose.Types.ObjectId(req.user!) }, // searching for users friends
@@ -68,6 +75,7 @@ export async function findFriends(req: Request & IExtReq, res: Response) {
                             year: { $year: '$today' },
                             month: '$dobMonth',
                             day: '$dobDay',
+                            timezone: timezone
                         },
                     },
                 },
@@ -82,6 +90,7 @@ export async function findFriends(req: Request & IExtReq, res: Response) {
                                     year: { $add: [{ $year: '$nextBirthday' }, 1] }, // add 1 year to next birthday
                                     month: '$dobMonth',
                                     day: '$dobDay',
+                                    timezone: timezone
                                 },
                             },
                             else: {
@@ -92,9 +101,10 @@ export async function findFriends(req: Request & IExtReq, res: Response) {
                                     ] },
                                     then: {
                                         $dateFromParts: {
-                                        year: { $add: [{ $year: '$nextBirthday' }, 1] }, // add 1 year to next birthday
-                                        month: '$dobMonth',
-                                        day: '$dobDay',
+                                            year: { $add: [{ $year: '$nextBirthday' }, 1] }, // add 1 year to next birthday
+                                            month: '$dobMonth',
+                                            day: '$dobDay',
+                                            timezone: timezone
                                         },
                                     },
                                     else: '$nextBirthday',
@@ -111,6 +121,7 @@ export async function findFriends(req: Request & IExtReq, res: Response) {
                             startDate: '$today',
                             endDate: '$nextBirthday',
                             unit: 'day',
+                            timezone: timezone
                         },
                     },
                 },
@@ -140,7 +151,7 @@ export async function findFriends(req: Request & IExtReq, res: Response) {
             }
         ]);
             
-        await Friend.populate(friends, { path: 'tags favoriteGifts' }); // populates tags and gifts
+        await Friend.populate(friends, { path: 'favoriteGifts' }); // populates gifts
         
         if (friends.length > 0) return res.status(200).json(friends);
         else if (friends.length === 0) return res.status(200).json({ message: 'No friends found' });
@@ -156,6 +167,7 @@ export async function showFriend(req: Request & IExtReq, res: Response) {
     try {
         const friendId = req.params.id;
         const friend = await Friend.findOne({ _id: friendId, user: req.user }).populate("tags").populate("favoriteGifts");
+        
         if (!friend) return res.status(404).json('Friend not found');
 
         return res.status(200).json(friend);
