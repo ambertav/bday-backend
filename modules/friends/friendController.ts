@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import Friend, { IFriendDocument, IFriendResult } from './models/friend';
 import UserProfile from '../profile/models/userProfile';
 import { IExtReq } from '../../interfaces/auth';
@@ -244,53 +244,39 @@ export async function updateFriend(req: Request & IExtReq, res: Response) {
     }
 }
 
-export async function addTag(req: Request & IExtReq, res: Response) {
+export async function updateTags (req : Request & IExtReq, res : Response) {
     try {
         const friendId = req.params.id;
         const friend = await Friend.findById(friendId);
-        if (!friend) throw { status: 404, message: "Friend not found" };
-        if (friend?.user.toString() !== req.user?.toString()) throw { status: 403, message: "User not authorized for this request" }
-        let { title, type } = req.body;
-        title = title.toLowerCase();
-        type = type ? type.toLowerCase() : "custom";
-        let existingTag = await Tag.findOne({ title });
-        let tagCreated = false;
-        if (!existingTag) {
-            existingTag = await Tag.create({ title, type });
-            tagCreated = true;
-        }
-        if (!friend.tags.includes(existingTag._id)) {
-            friend.tags.push(existingTag._id);
-            await friend.save();
-        }
-        const statusCode = tagCreated ? 201 : 200;
-        res.status(statusCode).json({ _id: existingTag._id });
-    } catch (error: any) {
-        if ('status' in error && 'message' in error) {
-            sendError(res, error as HTTPError);
-        } else {
-            res.status(500).json({ message: "Internal server error" });
-        }
-    }
-}
+        if (!friend) throw { status: 404, message: 'Friend not found' };
+        if (friend?.user.toString() !== req.user?.toString()) throw { status: 403, message: 'User not authorized for this request' }
 
-export async function removeTag(req: Request & IExtReq, res: Response) {
-    try {
-        const friendId = req.params.id;
-        const tagId = req.params.tagId;
-        const friend = await Friend.findById(friendId);
-        if (!friend) throw { status: 404, message: "Friend not found" };
-        if (friend?.user.toString() !== req.user?.toString()) throw { status: 403, message: "User not authorized for this request" }
-        const tag = await Tag.findById(tagId);
-        if (!tag) throw { status: 404, message: "Tag not found" };
-        const idx = friend.tags.findIndex(el => tag._id.equals(el));
-        if (idx > -1) {
-            friend.tags.splice(idx, 1);
-            await friend.save();
-            return res.status(200).json({ message: "Tag removed" });
-        } else {
-            return res.status(200).json({});
-        }
+        const tags = req.body;
+
+        // map tags into array of promises
+        const tagPromises : Promise <Types.ObjectId>[] = tags.map(async (tag : any) => {
+
+            // checks if tag is object with id to skip querying
+            if (tag._id) { // if tag has an id...
+                
+                // ensure that its a valid ObjectId
+                if (!Types.ObjectId.isValid(tag._id)) throw { status: 400, message: 'Invalid ObjectId provided for the tag' };
+                return new Types.ObjectId(tag._id); // return tag id
+            } else {
+                let title = tag.title ? tag.title.toLowerCase() : tag.toLowerCase(); // extracts title, considers object or string
+                let existingTag = await Tag.findOne({ title }); // find the existing tag with title
+                if (!existingTag) existingTag = await Tag.create({ title, type: 'custom' }); // create if it doesn't exist
+                return new Types.ObjectId(existingTag._id); // return tag id
+            }
+        });
+
+        const resolvedTags = await Promise.all(tagPromises); // resolving promises, compiling array of ObjectIds
+        
+        friend.tags = resolvedTags; // update friends.tags
+        await friend.save(); // save friend
+
+        res.status(200).json({ message: 'Tags updated successfully' });
+
     } catch (error: any) {
         if ('status' in error && 'message' in error) {
             sendError(res, error as HTTPError);
