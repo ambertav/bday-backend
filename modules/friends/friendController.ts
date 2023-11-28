@@ -4,7 +4,7 @@ import Friend, { IFriendDocument, IFriendResult } from './models/friend';
 import UserProfile from '../profile/models/userProfile';
 import { IExtReq } from '../../interfaces/auth';
 import { HTTPError, sendError } from '../../utilities/utils';
-import { formatFriendsData, daysUntilBirthday } from '../../utilities/dobUtilities';
+import { formatFriendsData, daysUntilBirthday } from '../../utilities/friendUtilities';
 import Tag from '../tags/models/tag';
 import { UploadedFile } from 'express-fileupload';
 import { PutObjectCommand, s3BaseUrl, s3Client } from '../../utilities/s3upload';
