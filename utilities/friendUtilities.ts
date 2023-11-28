@@ -6,7 +6,7 @@ export function formatFriendsData(friends: IFriendResult[]) {
         today: [] as IFriendResult[],
         thisWeek: [] as IFriendResult[],
         thisMonth: [] as IFriendResult[],
-        laterOn: [] as IFriendResult[],
+        upcoming: [] as IFriendResult[],
     }
 
     friends.forEach((friend, index) => {
@@ -18,7 +18,7 @@ export function formatFriendsData(friends: IFriendResult[]) {
         else if (friend.daysUntilBirthday <= 31) {
             const category = categorizeBirthday(friend.dob); // determines if the birthday lands in calendar week or just calendar month
             if (category === 'thisWeek' || category === 'thisMonth') result[category].push(friend); // pushes according to return
-        } else result.laterOn.push(friend);
+        } else result.upcoming.push(friend);
     });
     return result;
 }
