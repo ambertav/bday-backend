@@ -6,7 +6,7 @@ export function formatFriendsData(friends: IFriendResult[]) {
         today: [] as IFriendResult[],
         thisWeek: [] as IFriendResult[],
         thisMonth: [] as IFriendResult[],
-        upcoming: [] as IFriendResult[],
+        laterOn: [] as IFriendResult[],
     }
 
     friends.forEach((friend, index) => {
@@ -18,30 +18,28 @@ export function formatFriendsData(friends: IFriendResult[]) {
         else if (friend.daysUntilBirthday <= 31) {
             const category = categorizeBirthday(friend.dob); // determines if the birthday lands in calendar week or just calendar month
             if (category === 'thisWeek' || category === 'thisMonth') result[category].push(friend); // pushes according to return
-        } else result.upcoming.push(friend);
+        } else result.laterOn.push(friend);
     });
     return result;
 }
 
 function categorizeBirthday(dob: Date) {
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth() + 1;
-
-    const birthdayDate = new Date(dob);
-    const birthdayMonth = birthdayDate.getMonth() + 1;
-    const birthdayDay = birthdayDate.getDate();
-
+    const currentDate = moment();
+    const currentMonth = currentDate.month() + 1;
+  
+    const birthdayDate = moment(dob);
+    const birthdayMonth = birthdayDate.month() + 1;
+  
     // calculate start and end dates of calendar week
-    const currentWeekStartDate = new Date(currentDate);
-    currentWeekStartDate.setDate(currentDate.getDate() - currentDate.getDay());
-    const currentWeekEndDate = new Date(currentWeekStartDate);
-    currentWeekEndDate.setDate(currentWeekStartDate.getDate() + 6);
+    const currentWeekStartDate = currentDate.clone().startOf('week');
+    const currentWeekEndDate = currentDate.clone().endOf('week');  
 
     // check if dob falls within calendar week
-    if (
-        (birthdayMonth === currentMonth && birthdayDay >= currentWeekStartDate.getDate() && birthdayDay <= currentWeekEndDate.getDate()) ||
-        (birthdayDate >= currentWeekStartDate && birthdayDate <= currentWeekEndDate)
-    ) return 'thisWeek'; // if yes, return week category
+    if ( (birthdayDate.isSameOrAfter(currentWeekStartDate) && birthdayDate.isSameOrBefore(currentWeekEndDate)) ||
+        (currentWeekStartDate.month() !== currentWeekEndDate.month() &&
+          ((birthdayDate.month() === currentWeekStartDate.month() && birthdayDate.date() >= currentWeekStartDate.date()) ||
+            (birthdayDate.month() === currentWeekEndDate.month() && birthdayDate.date() <= currentWeekEndDate.date())))
+      ) return 'thisWeek'; // if yes, return week category
     else if (currentMonth === birthdayMonth) return 'thisMonth'; // if no, return month category
 }
 
