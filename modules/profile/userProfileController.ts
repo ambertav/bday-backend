@@ -6,6 +6,7 @@ import { IUserProfileDetails } from "../../interfaces/userProfile";
 import { IExtReq } from "../../interfaces/auth";
 import { s3Client, s3BaseUrl, PutObjectCommand } from '../../utilities/s3upload';
 import { UploadedFile } from 'express-fileupload';
+import { daysUntilBirthday } from "../../utilities/friendUtilities";
 
 export async function updateProfileDetails(req: Request & IExtReq, res: Response) {
     try {
@@ -98,7 +99,13 @@ export async function getCurrentUser(req: Request & IExtReq, res: Response) {
         const profile = await UserProfile.findOne({ user: req.user });
         const user = await User.findById(req.user);
         if (!user || !profile) throw { status: 404, message: "User or profile not found" };
-        res.status(200).json({ user, profile });
+
+        const expandedProfile = {
+            ...profile.toJSON(),
+            daysUntilBirthday: daysUntilBirthday(profile.dob, profile.timezone)
+        }
+
+        res.status(200).json({ user, profile: expandedProfile });
     } catch (error: any) {
         if ('status' in error && 'message' in error) {
             sendError(res, error as HTTPError);
