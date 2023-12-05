@@ -47,7 +47,13 @@ export async function getUserProfile(req: Request & IExtReq, res: Response) {
     try {
         const profile = await UserProfile.findOne({ user: req.user });
         if (!profile) throw { status: 404, message: "Profile not found" };
-        res.status(200).json({ profile });
+
+        const expandedProfile = {
+            ...profile.toJSON(),
+            daysUntilBirthday: daysUntilBirthday(profile.dob, profile.timezone)
+        }
+
+        res.status(200).json({ profile: expandedProfile });
     } catch (error: any) {
         if ('status' in error && 'message' in error) {
             sendError(res, error as HTTPError);

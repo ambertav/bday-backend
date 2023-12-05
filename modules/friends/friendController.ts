@@ -167,6 +167,66 @@ export async function findFriends(req: Request & IExtReq, res: Response) {
     }
 }
 
+export async function getFriendBirthdays (req: Request & IExtReq, res: Response) {
+    try {
+        const friendBirthdays = await Friend.aggregate([
+            {
+              $match: { user: new mongoose.Types.ObjectId(req.user!) }
+            },
+            { // project necessary fields
+              $project: {
+                _id: 1,
+                dob: 1,
+                name: 1,
+                monthDay: { $dateToString: { format: '%m-%d', date: '$dob' } } // extract dob month and dob day
+              }
+            },
+            {
+              $group: { // groups friends by birthday (dob month and dob day)
+                _id: '$monthDay',
+                friends: {
+                  $push: {
+                    name: '$name',
+                    dob: '$dob',
+                    _id: '$_id'
+                  }
+                }
+              }
+            },
+            {
+              $group: { // group again to structure as array of key-value pairs
+                _id: null,
+                birthdays: {
+                  $push: {
+                    k: '$_id', // key is birthday
+                    v: '$friends' // value is array of friends with birthday
+                  }
+                }
+              }
+            },
+            {
+              $replaceRoot: { // reshape result into object with birthdays as keys and array of friends as values
+                newRoot: {
+                  $arrayToObject: '$birthdays'
+                }
+              }
+            }
+          ]);
+          
+
+          if (friendBirthdays.length === 0) { // if no friends found, return message for frontend
+              return res.status(200).json({ message: 'No friends found' });
+            } else {
+            // result is array of length 1 containing the desired object to return
+          return res.status(200).json(friendBirthdays[0]);
+        }
+    } catch (error: any) {
+        return res.status(500).json({
+            error: error.message
+        });
+    }
+    }
+
 export async function showFriend(req: Request & IExtReq, res: Response) {
     try {
         const friendId = req.params.id;
