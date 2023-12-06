@@ -177,6 +177,7 @@ export async function getFriendBirthdays (req: Request & IExtReq, res: Response)
               $project: {
                 _id: 1,
                 dob: 1,
+                photo: 1,
                 name: 1,
                 monthDay: { $dateToString: { format: '%m-%d', date: '$dob' } } // extract dob month and dob day
               }
@@ -188,6 +189,7 @@ export async function getFriendBirthdays (req: Request & IExtReq, res: Response)
                   $push: {
                     name: '$name',
                     dob: '$dob',
+                    photo: '$photo',
                     _id: '$_id'
                   }
                 }
