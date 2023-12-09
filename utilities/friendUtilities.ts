@@ -23,23 +23,18 @@ export function formatFriendsData(friends: IFriendResult[]) {
     return result;
 }
 
-function categorizeBirthday(dob: Date) {
+function categorizeBirthday(dob : Date) {
     const currentDate = moment();
     const currentMonth = currentDate.month() + 1;
-  
-    const birthdayDate = moment(dob);
-    const birthdayMonth = birthdayDate.month() + 1;
-  
-    // calculate start and end dates of calendar week
-    const currentWeekStartDate = currentDate.clone().startOf('week');
-    const currentWeekEndDate = currentDate.clone().endOf('week');  
 
-    // check if dob falls within calendar week
-    if ( (birthdayDate.isSameOrAfter(currentWeekStartDate) && birthdayDate.isSameOrBefore(currentWeekEndDate)) ||
-        (currentWeekStartDate.month() !== currentWeekEndDate.month() &&
-          ((birthdayDate.month() === currentWeekStartDate.month() && birthdayDate.date() >= currentWeekStartDate.date()) ||
-            (birthdayDate.month() === currentWeekEndDate.month() && birthdayDate.date() <= currentWeekEndDate.date())))
-      ) return 'thisWeek'; // if yes, return week category
+    const birthdayDate = moment(dob);
+    birthdayDate.year(currentDate.year());
+    const birthdayMonth = birthdayDate.month() + 1;
+
+    // check if the birthday falls within the current week
+    const isThisWeek = birthdayDate.isSame(currentDate, 'week');
+
+    if (isThisWeek) return 'thisWeek'; // if yes, return week category
     else if (currentMonth === birthdayMonth) return 'thisMonth'; // if no, return month category
 }
 
