@@ -348,53 +348,6 @@ export async function updateTags (req : Request & IExtReq, res : Response) {
     }
 }
 
-export async function addPreference(req: Request & IExtReq, res: Response) {
-    try {
-        const friendId = req.params.id;
-        let { preference } = req.body;
-        preference = preference.toLowerCase();
-        const friend = await Friend.findById(friendId).populate("tags").populate("favoriteGifts");
-        if (!friend) {
-            throw { status: 404, message: 'Friend not found' };
-        }
-        if (!friend.giftPreferences.includes(preference)) {
-            friend.giftPreferences.push(preference);
-            await friend.save();
-        }
-        res.status(200).json({ friend });
-    } catch (error: any) {
-        if ('status' in error && 'message' in error) {
-            sendError(res, error as HTTPError);
-        } else {
-            res.status(500).json({ message: "Internal server error" });
-        }
-    }
-}
-
-export async function removePreference(req: Request & IExtReq, res: Response) {
-    try {
-        const friendId = req.params.id;
-        let { preference } = req.body;
-        preference = preference.toLowerCase();
-        const friend = await Friend.findById(friendId).populate("tags");
-        if (!friend) {
-            throw { status: 404, message: 'Friend not found' };
-        }
-        const index = friend.giftPreferences.indexOf(preference);
-        if (index > -1) {
-            friend.giftPreferences.splice(index, 1);
-            await friend.save();
-        }
-        res.status(200).json({ friend });
-    } catch (error: any) {
-        if ('status' in error && 'message' in error) {
-            sendError(res, error as HTTPError);
-        } else {
-            res.status(500).json({ message: "Internal server error" });
-        }
-    }
-}
-
 export async function uploadFriendPhoto(req: Request & IExtReq, res: Response) {
     try {
         const file = req.files!.photo as UploadedFile;
