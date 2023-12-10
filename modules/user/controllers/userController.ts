@@ -141,29 +141,6 @@ export async function confirmDeleteUser(req: Request & IExtReq, res: Response) {
     }
 }
 
-// export async function signup(req: Request, res: Response) {
-//     try {
-//         const { email, password, name, tel, dob, gender }: ISignupRequest = req.body;
-
-//         const existingUser = await User.findOne({ email });
-//         if (existingUser) throw { status: 400, message: "Email already in use" };
-
-//         const user: IUserDocument = new User({ email, passwordHash: password, name, tel, dob, gender });
-
-//         await user.save();
-
-//         // TODO: Send activation/verification e-mail?
-
-//         res.status(201).json({ message: "User successfully created", accessToken: createJwt(user._id) });
-//     } catch (error: any) {
-//         if ('status' in error && 'message' in error) {
-//             sendError(res, error as HTTPError);
-//         } else {
-//             res.status(500).json({ message: "Internal server error" });
-//         }
-//     }
-// }
-
 export async function signup(req: Request, res: Response) {
     try {
         const data: ISignupRequest = req.body;

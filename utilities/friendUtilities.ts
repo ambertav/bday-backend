@@ -47,13 +47,13 @@ export function daysUntilBirthday(dob: Date, timezone: string) {
     const now = moment.tz(timezone);
 
     birthday.year(now.year()); // set birthday to this year
+    birthday.set({ hour: 23, minute: 59, second: 59, millisecond: 999 }); // set birthday time to just before the next day
 
-    if (now.isAfter(birthday)) { // if the birthday passed...
-        birthday.add(1, 'year'); // add 1 to the year
-    }
+    // if the birthday passed, add 1 to the year
+    if (now.isAfter(birthday)) birthday.add(1, 'year'); // add 1 to the year
 
     // calculate difference between now and birthday,
-    const daysUntilBirthday = birthday.diff(now, 'days') + 1; // add 1 due to how moment.tz subtracts
+    const daysUntilBirthday = birthday.diff(now, 'days');
 
     return daysUntilBirthday;
 }
