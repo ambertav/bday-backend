@@ -7,6 +7,7 @@ export interface IUserProfileDetails {
     location?: string;
     name?: string;
     timezone?: string;
+    notificationSchedule?: number[];
     emailNotifications?: boolean;
     pushNotifications?: boolean;
 }
