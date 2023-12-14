@@ -12,15 +12,15 @@ export interface IApproachingBirthday {
     token: string | null;
     friendId: string;
     friendName: string;
-    hoursUntil: number;
+    daysUntil: number;
     emailNotifications: boolean;
     pushNotifications: boolean;
 }
 
-export async function getApproachingBirthdays(cutoffHours: number = 96, lastNotificationClearance: number = 24): Promise<IApproachingBirthday[]> {
+export async function getApproachingBirthdays(lastNotificationClearance: number = 24): Promise<IApproachingBirthday[]> {
     try {
         // find users, who have either emailNotification or pushNotification set to true in their UserProfile
-        // whose friends have an upcoming birthday with less than cutoffHours, calculated according to the timezone settings in UserProfile (for each user)
+        // whose friends have an upcoming birthday within the user's preferred notification schedule, calculated according to the timezone settings in UserProfile (for each user)
         // AND who haven't been sent a Notification in more than lastNotificationClearance
         const currentDateTime = new Date();
         const notificationClearanceDateTime = new Date(currentDateTime.getTime() - lastNotificationClearance * 3600000);
@@ -54,7 +54,13 @@ export async function getApproachingBirthdays(cutoffHours: number = 96, lastNoti
                 }
             },
             { $unwind: '$friends' },
-            // Calculate the hours until each friend's upcoming birthday
+            // Exclude friends with includeInNotifications: false
+{
+    $match: {
+        'friends.includeInNotifications': true
+    }
+},
+            // Calculate the days until each friend's upcoming birthday
             // Convert the friends' dob to their upcoming birthday date
             {
                 $addFields: {
@@ -94,23 +100,23 @@ export async function getApproachingBirthdays(cutoffHours: number = 96, lastNoti
             {
                 // Calculate hours until upcoming birthday
                 $addFields: {
-                    'hoursUntilBirthday': {
+                    'daysUntilBirthday': {
                         $dateDiff: {
                             startDate: currentDateTime,
                             endDate: '$upcomingBirthday',
-                            unit: 'hour',
+                            unit: 'day',
                             timezone: '$userProfile.timezone'
                         }
                     }
                 }
             },
             {
-                // Filter those not within cutoffHours
+                // Filter friends with daysUntilBirthday that matches user's preferred notification schedule
                 $match: {
-                    'hoursUntilBirthday': { $lte: cutoffHours }
+                    'daysUntilBirthday': { $in: '$userProfile.notificationSchedule' }
                 }
             },
-            // Lookup notifications to exclude friends with recent notifications
+            // Lookup notifications to exclude friends with recent notifications (job runs every 12 hours -- should only send once per day)
             {
                 $lookup: {
                     from: 'notifications',
@@ -153,7 +159,7 @@ export async function getApproachingBirthdays(cutoffHours: number = 96, lastNoti
                     token: '$device.deviceToken',
                     friendId: '$friends._id',
                     friendName: '$friends.name',
-                    hoursUntil: '$hoursUntilBirthday',
+                    daysUntil: '$daysUntilBirthday',
                     emailNotifications: '$userProfile.emailNotifications',
                     pushNotifications: '$userProfile.pushNotifications'
                 }
@@ -165,7 +171,7 @@ export async function getApproachingBirthdays(cutoffHours: number = 96, lastNoti
             token: user.token,
             friendId: user.friendId.toString(),
             friendName: user.friendName,
-            hoursUntil: user.hoursUntil,
+            daysUntil: user.daysUntil,
             emailNotifications: user.emailNotifications,
             pushNotifications: user.pushNotifications,
         }));
@@ -185,7 +191,7 @@ export async function sendExpoNotifications(list: IApproachingBirthday[]) {
         messages.push({
             to: item.token,
             sound: 'default',
-            body: `${item.friendName}'s birthday is ${item.hoursUntil} hours away!`
+            body: `${item.friendName}'s birthday is ${item.daysUntil} days away!`
         });
     }
     let chunks = expo.chunkPushNotifications(messages as ExpoPushMessage[]);
@@ -338,8 +344,9 @@ export async function startAgenda() {
         const birthdays = await getApproachingBirthdays();
         console.log("Sending push notifications");
         await sendExpoNotifications(birthdays);
+        console.log(birthdays);
         console.log('Done');
     });
     await agenda.start();
-    await agenda.every('12 hours', 'send birthday reminders');
+    await agenda.every('1 minute', 'send birthday reminders');
 }
