@@ -38,6 +38,11 @@ const userProfileSchema = new mongoose.Schema({
             message: (props: ValidatorProps) => `${props.value} is not a valid timezone!`
         }
     },
+    notificationSchedule: {
+        type: [ Number ],
+        enum: [30, 7, 3, 0], // 30 days before, 7 days before, 3 days before, and day of
+        default: [7, 0], // default to 1 week before and day of birthdays
+    },
     emailNotifications: {
         type: Boolean,
         required: true,

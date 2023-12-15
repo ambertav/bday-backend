@@ -26,13 +26,9 @@ const friendSchema = new mongoose.Schema({
         type: String,
         required: false,
     },
-    bio: {
-        type: String,
-        maxLength: 200,
-        trim: true,
-    },
-    interests: {
-        type: [ String ],
+    includeInNotifications: {
+        type: Boolean,
+        default: true
     },
     tags: [
         {
@@ -85,8 +81,7 @@ export interface IFriendDocument extends mongoose.Document {
     gender: string;
     dob: Date;
     photo: string;
-    bio: string;
-    interests: string[];
+    includeInNotifications: boolean;
     tags: mongoose.Types.ObjectId[];
     user: mongoose.Types.ObjectId;
     giftPreferences: string[];

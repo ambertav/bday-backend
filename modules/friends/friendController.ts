@@ -16,8 +16,7 @@ interface IFriendRequest {
     gender: string;
     dob: Date;
     photo: string;
-    bio: string;
-    interests: string[];
+    includeInNotifications: boolean;
     tags: mongoose.Types.ObjectId[],
     giftPreferences: string[];
 }
@@ -25,15 +24,13 @@ interface IFriendRequest {
 
 export async function addFriend(req: Request & IExtReq, res: Response) {
     try {
-        const { name, location, gender, dob, bio, interests, tags, giftPreferences }: IFriendRequest = req.body;
+        const { name, location, gender, dob, tags, giftPreferences }: IFriendRequest = req.body;
 
         const newFriend: IFriendDocument = new Friend({
             name,
             location,
             gender,
             dob,
-            bio,
-            interests,
             tags,
             giftPreferences,
             user: req.user

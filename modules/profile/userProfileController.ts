@@ -20,6 +20,7 @@ export async function updateProfileDetails(req: Request & IExtReq, res: Response
             'tel',
             'name',
             'timezone',
+            'notificationSchedule',
             'emailNotifications',
             'pushNotifications'
         ];
