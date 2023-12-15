@@ -53,3 +53,19 @@ export async function getNotifications (req : Request & IExtReq, res : Response)
         });
     }
 }
+
+export async function markNotiicationAsRead (req : Request & IExtReq, res : Response) {
+    try {
+        const updateNotifs = await Notification.updateMany(
+            { _id: { $in: req.body.notificationIds }, userId: req.user! },
+            { $set: { isRead: true } }
+        );
+
+        res.status(200).json({ message: 'Notifications marked as read successfully' });
+
+    } catch (error: any) {
+        return res.status(500).json({
+            error: error.message
+        });
+    }
+}
