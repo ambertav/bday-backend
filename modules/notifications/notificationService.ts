@@ -1,8 +1,9 @@
 import User from "../user/models/user";
+import mongoose from "mongoose";
 import Expo, { ExpoPushMessage, ExpoPushTicket } from "expo-server-sdk";
 import { ticketCache } from "../../utilities/cache";
 import userProfile from "../profile/models/userProfile";
-import notification from "./models/notification";
+import Notification from "./models/notification";
 import deviceInfo from "./models/deviceInfo";
 import Agenda from "agenda";
 
@@ -55,11 +56,9 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
             },
             { $unwind: '$friends' },
             // Exclude friends with includeInNotifications: false
-{
-    $match: {
-        'friends.includeInNotifications': true
-    }
-},
+            {
+                $match: { 'friends.includeInNotifications': true }
+            },
             // Calculate the days until each friend's upcoming birthday
             // Convert the friends' dob to their upcoming birthday date
             {
@@ -128,7 +127,7 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
                                     $and: [
                                         { $eq: ['$userId', '$$userId'] },
                                         { $eq: ['$friendId', '$$friendId'] },
-                                        { $gt: ['$dateSent', notificationClearanceDateTime] }
+                                        { $gt: ['$createdAt', notificationClearanceDateTime] }
                                     ]
                                 }
                             }
@@ -181,6 +180,41 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
     }
 }
 
+export async function createNotifications (list: IApproachingBirthday[]) {
+    // to batch promises
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    // promises to create notifications from approaching birthdays
+    const notificationPromises = list.map(async (item) => {
+        try {
+            const methods = ['default'];
+            if (item.pushNotifications) methods.push('push');
+            if (item.emailNotifications) methods.push('email');
+
+            const notification = await Notification.create([
+                {
+                    type: item.daysUntil,
+                    user: item.userId,
+                    friend: item.friendId,
+                    sent: { method: methods },
+                }], { session });
+
+              return notification[0];
+
+        } catch (error : any) {
+            console.error('Error creating notification: ', error.message);
+            return null;
+        }
+    });
+
+    const notifications = await Promise.all(notificationPromises);
+    await session.commitTransaction();
+    session.endSession();
+
+    return notifications.filter(notification => notification !== null); // return successful notifications
+}
+
 export async function sendExpoNotifications(list: IApproachingBirthday[]) {
     const expo = new Expo();
     // filter only push notification allowed users
@@ -188,10 +222,18 @@ export async function sendExpoNotifications(list: IApproachingBirthday[]) {
     // TODO: Choose message body randomly from pool
     const messages = [];
     for (let item of pushList) {
+        let message : string = '';
+
+        if (item.daysUntil === 30) message = `${item.friendName}'s birthday is ${item.daysUntil} days away! Get personalized gift recommendations in the Explore tab and save to their favorites for later.`;
+        else if (item.daysUntil === 7) message = `${item.friendName}'s birthday is ${item.daysUntil} days away! Venture to their favorite gifts to find the perfect one.`;
+        else if (item.daysUntil === 3) message = `${item.friendName}'s birthday is ${item.daysUntil} days away! Did you get them a gift yet?`;
+        else if (item.daysUntil === 0) message = `${item.friendName}'s birthday is today. Don't forget to tell them happy birthday!`;
+        else message =  `${item.friendName}'s birthday is ${item.daysUntil} days away!`;
+
         messages.push({
             to: item.token,
             sound: 'default',
-            body: `${item.friendName}'s birthday is ${item.daysUntil} days away!`
+            body: message
         });
     }
     let chunks = expo.chunkPushNotifications(messages as ExpoPushMessage[]);
@@ -219,7 +261,7 @@ export async function sendExpoNotifications(list: IApproachingBirthday[]) {
                         .then((device) => {
                             if (device) {
                                 const index = pushList.findIndex(item => item.token === device.deviceToken)
-                                notification.create({
+                                Notification.create({
                                     userId: pushList[index].userId,
                                     friendId: pushList[index].friendId
                                 });
@@ -342,8 +384,13 @@ export async function startAgenda() {
     agenda.define('send birthday reminders', async () => {
         console.log("Running birthday check");
         const birthdays = await getApproachingBirthdays();
+
+        console.log('creating notifications')
+        const notifications = await createNotifications(birthdays);
+
         console.log("Sending push notifications");
         await sendExpoNotifications(birthdays);
+        
         console.log(birthdays);
         console.log('Done');
     });
