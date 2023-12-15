@@ -9,22 +9,22 @@ export async function getNotifications (req : Request & IExtReq, res : Response)
     try {
         const notifications = await Notification.aggregate([
             {
-                $match: { userId: new mongoose.Types.ObjectId(req.user!) } // find notifications for user
+                $match: { user: new mongoose.Types.ObjectId(req.user!) } // find notifications for user
             },
             {
                 $sort: { isRead: -1, createdAt: 1 } // sort so that isRead: false and soonest creation are first
             },
             {
                 $project: { // only need isRead and friend info
-                    friendId: 1,
+                    friend: 1,
                     isRead: 1,
                 }
             },
         ]);
 
-        if (notifications.length > 0) { // if notifications...
-            await Notification.populate(notifications, { path: 'friendId', select: '_id name dob'}); // populate friend info
 
+        if (notifications.length > 0) { // if notifications...
+            await Notification.populate(notifications, { path: 'friend', select: '_id name dob'}); // populate friend info
             // find user's timezone for daysUntilBirthday calculation
             const userProfile = await UserProfile.findOne({ user: req.user }).select('timezone');
             let timezone = userProfile?.timezone;
@@ -32,13 +32,12 @@ export async function getNotifications (req : Request & IExtReq, res : Response)
 
             // calculate daysUntilBirthday, sort into current and past notifications based on if read
             const { current, past } = notifications.reduce((result, n) => {
-                const days = daysUntilBirthday(n.friendId.dob, timezone!);
+                const days = daysUntilBirthday(n.friend.dob, timezone!);
 
-                if (n.isRead === true) result.past.push({ ...n, friendId: { ...n.friendId.toJSON(), daysUntilBirthday: days }});
-                else if (n.isRead === false) result.current.push({ ...n, friendId: { ...n.friendId.toJSON(), daysUntilBirthday: days }});
+                if (n.isRead === true) result.past.push({ ...n, friend: { ...n.friend.toJSON(), daysUntilBirthday: days }});
+                else if (n.isRead === false) result.current.push({ ...n, friend: { ...n.friend.toJSON(), daysUntilBirthday: days }});
 
                 return result;
-
 
             }, { current: [], past: [] });
         
@@ -57,13 +56,28 @@ export async function getNotifications (req : Request & IExtReq, res : Response)
 export async function markNotiicationAsRead (req : Request & IExtReq, res : Response) {
     try {
         const updateNotifs = await Notification.updateMany(
-            { _id: { $in: req.body.notificationIds }, userId: req.user! },
+            { _id: { $in: req.body.notificationIds }, user: req.user! },
             { $set: { isRead: true } }
         );
 
         res.status(200).json({ message: 'Notifications marked as read successfully' });
 
     } catch (error: any) {
+        return res.status(500).json({
+            error: error.message
+        });
+    }
+}
+
+export async function deleteNotification (req : Request & IExtReq, res : Response) {
+    try {
+        const deletedNotification = await Notification.findOneAndDelete({
+            _id: req.params.id, user: req.user!
+        });
+
+        res.status(200).json({ message: 'Notification deleted successfully' });
+
+    } catch (error : any) {
         return res.status(500).json({
             error: error.message
         });
