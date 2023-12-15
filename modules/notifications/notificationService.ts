@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import Expo, { ExpoPushMessage, ExpoPushTicket } from "expo-server-sdk";
 import { ticketCache } from "../../utilities/cache";
 import userProfile from "../profile/models/userProfile";
-import Notification from "./models/notification";
+import Notification, { INotificationDocument } from "./models/notification";
 import deviceInfo from "./models/deviceInfo";
 import Agenda from "agenda";
 
@@ -17,6 +17,7 @@ export interface IApproachingBirthday {
     emailNotifications: boolean;
     pushNotifications: boolean;
 }
+
 
 export async function getApproachingBirthdays(lastNotificationClearance: number = 24): Promise<IApproachingBirthday[]> {
     try {
@@ -224,6 +225,7 @@ export async function sendExpoNotifications(list: IApproachingBirthday[]) {
     for (let item of pushList) {
         let message : string = '';
 
+        // various message options depending on out many days until birthday for each notification
         if (item.daysUntil === 30) message = `${item.friendName}'s birthday is ${item.daysUntil} days away! Get personalized gift recommendations in the Explore tab and save to their favorites for later.`;
         else if (item.daysUntil === 7) message = `${item.friendName}'s birthday is ${item.daysUntil} days away! Venture to their favorite gifts to find the perfect one.`;
         else if (item.daysUntil === 3) message = `${item.friendName}'s birthday is ${item.daysUntil} days away! Did you get them a gift yet?`;
@@ -251,26 +253,39 @@ export async function sendExpoNotifications(list: IApproachingBirthday[]) {
             // documentation:
             // https://docs.expo.io/push-notifications/sending-notifications/#individual-errors
             // Map each ticket index to corresponding ticket
-            ticketChunk.forEach((ticket, idx) => {
+
+            ticketChunk.forEach(async (ticket, idx) => {
                 ticketsToTokensMap.set(tickets.length - ticketChunk.length + idx, chunk[idx].to as string);
                 // Map each ticket id to corresponding ticket, if it was successful
                 if (ticket.status === 'ok' && ticket.id) {
                     const tkn = chunk[idx].to as string
-                    ticketIDsToTokensMap.set(ticket.id, tkn);
-                    deviceInfo.findOne({ deviceToken: tkn })
-                        .then((device) => {
+                    // ticketIDsToTokensMap.set(ticket.id, tkn);
+                    try {
+                        const device = await deviceInfo.findOne({ deviceToken: tkn })
                             if (device) {
                                 const index = pushList.findIndex(item => item.token === device.deviceToken)
-                                Notification.create({
-                                    userId: pushList[index].userId,
-                                    friendId: pushList[index].friendId
+                                const currentDate = new Date();
+                                // updating previously created notification with ticketId
+                                const notificationToUpdate = await Notification.findOne({ 
+                                    userId: pushList[index].userId, 
+                                    friendId: pushList[index].friendId, 
+                                    createdAt: { // find the notification that was created within this job interval
+                                        $lt: currentDate, // created before current date and time
+                                        $gte: new Date(currentDate.getTime() - 3600000) // but no more than 1 hour old
+                                    } 
                                 });
+                                if (notificationToUpdate) {
+                                    notificationToUpdate.sent.ticketId = ticket.id;
+                                    await notificationToUpdate.save();
+                                }
                             }
-                        });
+                    } catch (error : any) {
+                        console.error('Error updating notification with ticket id: ', error);
+                    }
                 }
             });
-        } catch (error) {
-            console.error(error);
+        } catch (error : any) {
+            console.error('Error sending push notifications: ', error);
         }
     }
 
@@ -390,7 +405,9 @@ export async function startAgenda() {
 
         console.log("Sending push notifications");
         await sendExpoNotifications(birthdays);
-        
+
+        // email notifications
+
         console.log(birthdays);
         console.log('Done');
     });
