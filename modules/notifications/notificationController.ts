@@ -69,3 +69,22 @@ export async function markNotiicationAsRead (req : Request & IExtReq, res : Resp
         });
     }
 }
+
+
+export async function cleanNotifications () {
+    try {
+        // calculate 7 days ago
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        // find and delete notifications created more than 7 days ago
+        const result = await Notification.deleteMany({
+            createdAt: { $lt: sevenDaysAgo },
+        });
+
+        console.log(`Deleted ${result.deletedCount} notifications older than 7 days`);
+
+    } catch (error : any) {
+        console.error('Error occurred while cleaning notifications collection: ', error.message);
+    }
+}
