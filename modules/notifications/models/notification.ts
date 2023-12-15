@@ -2,24 +2,29 @@ import mongoose from "mongoose";
 
 const notificationSchema = new mongoose.Schema({
     type: {
-        type: String,
+        type: Number,
         required: true,
-        enum: ['push', 'email'],
-        default: 'push'
+        enum: [30, 7, 3, 0], // enum of values corresponding to notification schedule, indicates what type of notification was sent
     },
-    userId: {
+    user: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
         ref: 'User'
     },
-    friendId: {
+    friend: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Friend'
     },
-    dateSent: {
-        type: Date,
-        required: true,
-        default: Date.now()
+    sent: {
+        date: { // date sent
+            type: Date,
+            default: Date.now()
+        },
+        method: { // how the notification was sent
+            type: [ String ],
+            enum: ['push', 'email', 'default'],
+            default: ['default'] // default would just be displayed in reminders page
+        }
     },
     isRead: {
         type: Boolean,
