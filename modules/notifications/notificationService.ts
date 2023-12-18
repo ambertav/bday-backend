@@ -66,10 +66,10 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
                 $addFields: {
                     'thisYearBirthday': {
                         $dateFromParts: {
-                            'year': { $year: currentDateTime },
-                            'month': { $month: '$friends.dob' },
-                            'day': { $dayOfMonth: '$friends.dob' },
-                            'timezone': '$userProfile.timezone'
+                            year: { $year: currentDateTime },
+                            month: { $month: '$friends.dob' },
+                            day: { $dayOfMonth: '$friends.dob' },
+                            timezone: '$userProfile.timezone'
                         }
                     }
                 }
@@ -78,10 +78,10 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
                 $addFields: {
                     'nextYearBirthday': {
                         $dateFromParts: {
-                            'year': { $add: [{ $year: currentDateTime }, 1] },
-                            'month': { $month: '$friends.dob' },
-                            'day': { $dayOfMonth: '$friends.dob' },
-                            'timezone': '$userProfile.timezone'
+                            year: { $add: [{ $year: currentDateTime }, 1] },
+                            month: { $month: '$friends.dob' },
+                            day: { $dayOfMonth: '$friends.dob' },
+                            timezone: '$userProfile.timezone'
                         }
                     }
                 }
@@ -90,9 +90,18 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
                 $addFields: {
                     'upcomingBirthday': {
                         $cond: {
-                            if: { $lt: ['$thisYearBirthday', currentDateTime] }, // if the birthday this year has passed
+                            if: { $lt: [{ $month: '$friends.dob' }, { $month: currentDateTime}] }, // if the birthday this year has passed
                             then: '$nextYearBirthday', // use the birthday next year
-                            else: '$thisYearBirthday' // otherwise, use the birthday this year
+                            else: {
+                                $cond: {
+                                    if: { $and: [
+                                        { $eq: [{ $month: '$friends.dob' }, { $month: currentDateTime } ] }, 
+                                        { $lt: [{ $dayOfMonth: '$friends.dob' }, { $dayOfMonth: currentDateTime } ] }, // if months are equal and dob day is less...
+                                    ] },
+                                    then: '$nextYearBirthday', // use the birthday next year
+                                    else: '$thisYearBirthday', // otherwise use birthday of this year
+                                },
+                            },
                         }
                     }
                 }
@@ -113,21 +122,23 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
             {
                 // Filter friends with daysUntilBirthday that matches user's preferred notification schedule
                 $match: {
-                    'daysUntilBirthday': { $in: '$userProfile.notificationSchedule' }
+                    $expr: {
+                        $in: ['$daysUntilBirthday', { $ifNull: ['$userProfile.notificationSchedule', []] }]
+                    }
                 }
             },
             // Lookup notifications to exclude friends with recent notifications (job runs every 12 hours -- should only send once per day)
             {
                 $lookup: {
                     from: 'notifications',
-                    let: { userId: '$userProfile.user', friendId: '$friends._id' },
+                    let: { user: '$userProfile.user', friend: '$friends._id' },
                     pipeline: [
                         {
                             $match: {
                                 $expr: {
                                     $and: [
-                                        { $eq: ['$userId', '$$userId'] },
-                                        { $eq: ['$friendId', '$$friendId'] },
+                                        { $eq: ['$user', '$$user'] },
+                                        { $eq: ['$friend', '$$friend'] },
                                         { $gt: ['$createdAt', notificationClearanceDateTime] }
                                     ]
                                 }
@@ -161,7 +172,7 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
                     friendName: '$friends.name',
                     daysUntil: '$daysUntilBirthday',
                     emailNotifications: '$userProfile.emailNotifications',
-                    pushNotifications: '$userProfile.pushNotifications'
+                    pushNotifications: '$userProfile.pushNotifications',
                 }
             }
         ]).exec();
@@ -408,7 +419,6 @@ export async function startAgenda() {
 
         // email notifications
 
-        console.log(birthdays);
         console.log('Done');
     });
     await agenda.start();
