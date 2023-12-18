@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import Expo, { ExpoPushMessage, ExpoPushTicket } from "expo-server-sdk";
 import { ticketCache } from "../../utilities/cache";
 import userProfile from "../profile/models/userProfile";
-import Notification from "./models/notification";
+import Notification, { INotificationDocument } from "./models/notification";
 import deviceInfo from "./models/deviceInfo";
 import Agenda from "agenda";
 
@@ -17,6 +17,7 @@ export interface IApproachingBirthday {
     emailNotifications: boolean;
     pushNotifications: boolean;
 }
+
 
 export async function getApproachingBirthdays(lastNotificationClearance: number = 24): Promise<IApproachingBirthday[]> {
     try {
@@ -65,10 +66,10 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
                 $addFields: {
                     'thisYearBirthday': {
                         $dateFromParts: {
-                            'year': { $year: currentDateTime },
-                            'month': { $month: '$friends.dob' },
-                            'day': { $dayOfMonth: '$friends.dob' },
-                            'timezone': '$userProfile.timezone'
+                            year: { $year: currentDateTime },
+                            month: { $month: '$friends.dob' },
+                            day: { $dayOfMonth: '$friends.dob' },
+                            timezone: '$userProfile.timezone'
                         }
                     }
                 }
@@ -77,10 +78,10 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
                 $addFields: {
                     'nextYearBirthday': {
                         $dateFromParts: {
-                            'year': { $add: [{ $year: currentDateTime }, 1] },
-                            'month': { $month: '$friends.dob' },
-                            'day': { $dayOfMonth: '$friends.dob' },
-                            'timezone': '$userProfile.timezone'
+                            year: { $add: [{ $year: currentDateTime }, 1] },
+                            month: { $month: '$friends.dob' },
+                            day: { $dayOfMonth: '$friends.dob' },
+                            timezone: '$userProfile.timezone'
                         }
                     }
                 }
@@ -89,9 +90,18 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
                 $addFields: {
                     'upcomingBirthday': {
                         $cond: {
-                            if: { $lt: ['$thisYearBirthday', currentDateTime] }, // if the birthday this year has passed
+                            if: { $lt: [{ $month: '$friends.dob' }, { $month: currentDateTime}] }, // if the birthday this year has passed
                             then: '$nextYearBirthday', // use the birthday next year
-                            else: '$thisYearBirthday' // otherwise, use the birthday this year
+                            else: {
+                                $cond: {
+                                    if: { $and: [
+                                        { $eq: [{ $month: '$friends.dob' }, { $month: currentDateTime } ] }, 
+                                        { $lt: [{ $dayOfMonth: '$friends.dob' }, { $dayOfMonth: currentDateTime } ] }, // if months are equal and dob day is less...
+                                    ] },
+                                    then: '$nextYearBirthday', // use the birthday next year
+                                    else: '$thisYearBirthday', // otherwise use birthday of this year
+                                },
+                            },
                         }
                     }
                 }
@@ -112,21 +122,23 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
             {
                 // Filter friends with daysUntilBirthday that matches user's preferred notification schedule
                 $match: {
-                    'daysUntilBirthday': { $in: '$userProfile.notificationSchedule' }
+                    $expr: {
+                        $in: ['$daysUntilBirthday', { $ifNull: ['$userProfile.notificationSchedule', []] }]
+                    }
                 }
             },
             // Lookup notifications to exclude friends with recent notifications (job runs every 12 hours -- should only send once per day)
             {
                 $lookup: {
                     from: 'notifications',
-                    let: { userId: '$userProfile.user', friendId: '$friends._id' },
+                    let: { user: '$userProfile.user', friend: '$friends._id' },
                     pipeline: [
                         {
                             $match: {
                                 $expr: {
                                     $and: [
-                                        { $eq: ['$userId', '$$userId'] },
-                                        { $eq: ['$friendId', '$$friendId'] },
+                                        { $eq: ['$user', '$$user'] },
+                                        { $eq: ['$friend', '$$friend'] },
                                         { $gt: ['$createdAt', notificationClearanceDateTime] }
                                     ]
                                 }
@@ -160,7 +172,7 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
                     friendName: '$friends.name',
                     daysUntil: '$daysUntilBirthday',
                     emailNotifications: '$userProfile.emailNotifications',
-                    pushNotifications: '$userProfile.pushNotifications'
+                    pushNotifications: '$userProfile.pushNotifications',
                 }
             }
         ]).exec();
@@ -224,6 +236,7 @@ export async function sendExpoNotifications(list: IApproachingBirthday[]) {
     for (let item of pushList) {
         let message : string = '';
 
+        // various message options depending on out many days until birthday for each notification
         if (item.daysUntil === 30) message = `${item.friendName}'s birthday is ${item.daysUntil} days away! Get personalized gift recommendations in the Explore tab and save to their favorites for later.`;
         else if (item.daysUntil === 7) message = `${item.friendName}'s birthday is ${item.daysUntil} days away! Venture to their favorite gifts to find the perfect one.`;
         else if (item.daysUntil === 3) message = `${item.friendName}'s birthday is ${item.daysUntil} days away! Did you get them a gift yet?`;
@@ -233,7 +246,8 @@ export async function sendExpoNotifications(list: IApproachingBirthday[]) {
         messages.push({
             to: item.token,
             sound: 'default',
-            body: message
+            body: message,
+            data: { friendId: item.friendId } // sending friend id to redirect on mobile
         });
     }
     let chunks = expo.chunkPushNotifications(messages as ExpoPushMessage[]);
@@ -251,26 +265,39 @@ export async function sendExpoNotifications(list: IApproachingBirthday[]) {
             // documentation:
             // https://docs.expo.io/push-notifications/sending-notifications/#individual-errors
             // Map each ticket index to corresponding ticket
-            ticketChunk.forEach((ticket, idx) => {
+
+            ticketChunk.forEach(async (ticket, idx) => {
                 ticketsToTokensMap.set(tickets.length - ticketChunk.length + idx, chunk[idx].to as string);
                 // Map each ticket id to corresponding ticket, if it was successful
                 if (ticket.status === 'ok' && ticket.id) {
                     const tkn = chunk[idx].to as string
-                    ticketIDsToTokensMap.set(ticket.id, tkn);
-                    deviceInfo.findOne({ deviceToken: tkn })
-                        .then((device) => {
+                    // ticketIDsToTokensMap.set(ticket.id, tkn);
+                    try {
+                        const device = await deviceInfo.findOne({ deviceToken: tkn })
                             if (device) {
                                 const index = pushList.findIndex(item => item.token === device.deviceToken)
-                                Notification.create({
-                                    userId: pushList[index].userId,
-                                    friendId: pushList[index].friendId
+                                const currentDate = new Date();
+                                // updating previously created notification with ticketId
+                                const notificationToUpdate = await Notification.findOne({ 
+                                    userId: pushList[index].userId, 
+                                    friendId: pushList[index].friendId, 
+                                    createdAt: { // find the notification that was created within this job interval
+                                        $lt: currentDate, // created before current date and time
+                                        $gte: new Date(currentDate.getTime() - 3600000) // but no more than 1 hour old
+                                    } 
                                 });
+                                if (notificationToUpdate) {
+                                    notificationToUpdate.sent.ticketId = ticket.id;
+                                    await notificationToUpdate.save();
+                                }
                             }
-                        });
+                    } catch (error : any) {
+                        console.error('Error updating notification with ticket id: ', error);
+                    }
                 }
             });
-        } catch (error) {
-            console.error(error);
+        } catch (error : any) {
+            console.error('Error sending push notifications: ', error);
         }
     }
 
@@ -390,8 +417,9 @@ export async function startAgenda() {
 
         console.log("Sending push notifications");
         await sendExpoNotifications(birthdays);
-        
-        console.log(birthdays);
+
+        // email notifications
+
         console.log('Done');
     });
     await agenda.start();

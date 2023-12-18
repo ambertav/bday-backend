@@ -24,6 +24,10 @@ const notificationSchema = new mongoose.Schema({
             type: [ String ],
             enum: ['push', 'email', 'default'],
             default: ['default'] // default would just be displayed in reminders page
+        },
+        ticketId: {
+            type: String,
+            default: '',
         }
     },
     isRead: {
@@ -35,4 +39,16 @@ const notificationSchema = new mongoose.Schema({
     timestamps: true
 });
 
-export default mongoose.model('Notification', notificationSchema);
+export interface INotificationDocument extends mongoose.Document {
+    type: number;
+    user: string;
+    friend: string;
+    sent: {
+        date: Date;
+        method: string[];
+        ticketId: String,
+    };
+    isRead: boolean;
+}
+
+export default mongoose.model <INotificationDocument> ('Notification', notificationSchema);
