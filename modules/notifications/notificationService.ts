@@ -246,7 +246,8 @@ export async function sendExpoNotifications(list: IApproachingBirthday[]) {
         messages.push({
             to: item.token,
             sound: 'default',
-            body: message
+            body: message,
+            data: { friendId: item.friendId } // sending friend id to redirect on mobile
         });
     }
     let chunks = expo.chunkPushNotifications(messages as ExpoPushMessage[]);
