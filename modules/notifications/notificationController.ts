@@ -3,7 +3,7 @@ import { IExtReq } from '../../interfaces/auth';
 import Notification from './models/notification';
 import UserProfile from '../profile/models/userProfile';
 import mongoose from 'mongoose';
-import { daysUntilBirthday } from '../../utilities/friendUtilities';
+import { daysFromBirthday } from '../../utilities/friendUtilities';
 
 export async function getNotifications (req : Request & IExtReq, res : Response) {
     try {
@@ -24,7 +24,7 @@ export async function getNotifications (req : Request & IExtReq, res : Response)
 
 
         if (notifications.length > 0) { // if notifications...
-            await Notification.populate(notifications, { path: 'friend', select: '_id name dob'}); // populate friend info
+            await Notification.populate(notifications, { path: 'friend', select: '_id name dob photo'}); // populate friend info
             // find user's timezone for daysUntilBirthday calculation
             const userProfile = await UserProfile.findOne({ user: req.user }).select('timezone');
             let timezone = userProfile?.timezone;
@@ -32,7 +32,7 @@ export async function getNotifications (req : Request & IExtReq, res : Response)
 
             // calculate daysUntilBirthday, sort into current and past notifications based on if read
             const { current, past } = notifications.reduce((result, n) => {
-                const days = daysUntilBirthday(n.friend.dob, timezone!);
+                const days = daysFromBirthday(n.friend.dob, timezone!);
 
                 if (n.isRead === true) result.past.push({ ...n, friend: { ...n.friend.toJSON(), daysUntilBirthday: days }});
                 else if (n.isRead === false) result.current.push({ ...n, friend: { ...n.friend.toJSON(), daysUntilBirthday: days }});
