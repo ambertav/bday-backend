@@ -18,5 +18,6 @@ router.post('/:id/upload', requireLogin, allowOnlyImageUpload, compressAndResize
 router.post('/:id/generate-gift', requireLogin, giftCtrl.recommendGift);
 router.post('/:id/favorites', requireLogin, giftCtrl.favoriteGift);
 router.delete('/:id/favorites/:favoriteId', requireLogin, giftCtrl.removeFavorite);
+router.put('/update-notification-inclusion', requireLogin, friendCtrl.updateNotificationInclusion);
 
 export default router;

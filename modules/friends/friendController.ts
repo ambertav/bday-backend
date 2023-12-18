@@ -228,8 +228,7 @@ export async function getFriendBirthdays (req: Request & IExtReq, res: Response)
 
 export async function showFriend(req: Request & IExtReq, res: Response) {
     try {
-        const friendId = req.params.id;
-        const friend = await Friend.findOne({ _id: friendId, user: req.user }).populate("tags").populate("favoriteGifts");
+        const friend = await Friend.findOne({ _id: req.params.id, user: req.user }).populate('tags favoriteGifts');
         if (!friend) return res.status(404).json('Friend not found');
 
         // find user's timezone to incorporate to daysUntilBirthday calculation
@@ -254,13 +253,11 @@ export async function showFriend(req: Request & IExtReq, res: Response) {
 
 export async function deleteFriend(req: Request & IExtReq, res: Response) {
     try {
-        const friendId = req.params.id;
-
-        const friend = await Friend.findById(friendId);
+        const friend = await Friend.findById(req.params.id);
         if (!friend) return res.status(404).json({ message: 'Friend not found' });
 
         if (friend?.user.toString() === req.user?.toString()) { // verifies that friend is associated with logged in user
-            const result = await Friend.findByIdAndDelete(friendId);
+            const result = await Friend.findByIdAndDelete(req.params.id);
             if (result) return res.status(200).json({ message: 'Friend deleted successfully' });
         }
 
@@ -275,22 +272,18 @@ export async function deleteFriend(req: Request & IExtReq, res: Response) {
 
 export async function updateFriend(req: Request & IExtReq, res: Response) {
     try {
-        const friendId = req.params.id;
-
-        const friend = await Friend.findById(friendId);
+        const friend = await Friend.findById(req.params.id);
         if (!friend) return res.status(404).json({ message: 'Friend not found' });
 
         if (friend?.user.toString() === req.user?.toString()) { // Verify that friend is associated with the logged in user
-            const { interests, ...others } = req.body;
 
             const updateFields = {
-                ...others,
-                interests,
+                ...req.body
             };
 
             delete updateFields.user; // so that it can't update the user
             delete updateFields.photo; // use photo upload endpoint instead
-            const result = await Friend.updateOne({ _id: friendId }, { $set: updateFields });
+            const result = await Friend.updateOne({ _id: req.params.id }, { $set: updateFields });
             if (result) return res.status(200).json({ message: 'Friend updated' });
         }
 
@@ -305,8 +298,7 @@ export async function updateFriend(req: Request & IExtReq, res: Response) {
 
 export async function updateTags (req : Request & IExtReq, res : Response) {
     try {
-        const friendId = req.params.id;
-        const friend = await Friend.findById(friendId);
+        const friend = await Friend.findById(req.params.id);
         if (!friend) throw { status: 404, message: 'Friend not found' };
         if (friend?.user.toString() !== req.user?.toString()) throw { status: 403, message: 'User not authorized for this request' }
 
@@ -378,4 +370,23 @@ export async function uploadFriendPhoto(req: Request & IExtReq, res: Response) {
         console.error('Error uploading profile photo to AWS S3:', s3Error);
         res.status(500).send('Error uploading profile photo to AWS S3');
     }
+}
+
+export async function updateNotificationInclusion (req : Request & IExtReq, res : Response) {
+    try {
+        const updateFriends = await Friend.updateMany(
+            { _id: { $in: req.body.friendIds }, user: req.user! },
+            // toggle includeInNotifications boolean for each friend id in array
+            [  { $set: { includeInNotifications : { $eq: [ false, "$includeInNotifications" ] } } } ]
+          );
+
+        res.status(200).json({ message: 'Updated friend notification preference successfully' });
+
+    } catch (error: any) {
+        if ('status' in error && 'message' in error) {
+            sendError(res, error as HTTPError);
+        } else {
+            res.status(500).json({ message: "Internal server error" });
+        }
+}
 }
