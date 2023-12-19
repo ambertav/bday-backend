@@ -58,6 +58,22 @@ export function daysUntilBirthday(dob: Date, timezone: string) {
     return daysUntilBirthday;
 }
 
+export function daysFromBirthday(dob: Date, timezone: string) {
+    // calculates days until birthday, but allows for negative values so that user can see if birthday has already passed
+    // intended for notifications page
+    const dobString = dob.toISOString().slice(0, 10);
+    const birthday = moment.tz(dobString, 'YYYY-MM-DD', timezone);
+    const now = moment.tz(timezone);
+  
+    birthday.year(now.year());
+    birthday.set({ hour: 23, minute: 59, second: 59, millisecond: 999 });
+  
+    // Calculate the difference between now and birthday
+    const daysFromBirthday = birthday.diff(now, 'days');
+  
+    return daysFromBirthday;
+  }
+
 const presentlyCardColors: string[] = [
     "#418BFA",
     "#f63517",

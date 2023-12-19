@@ -3,28 +3,43 @@ import { IExtReq } from '../../interfaces/auth';
 import Notification from './models/notification';
 import UserProfile from '../profile/models/userProfile';
 import mongoose from 'mongoose';
-import { daysUntilBirthday } from '../../utilities/friendUtilities';
+import { daysFromBirthday } from '../../utilities/friendUtilities';
 
 export async function getNotifications (req : Request & IExtReq, res : Response) {
     try {
         const notifications = await Notification.aggregate([
             {
-                $match: { user: new mongoose.Types.ObjectId(req.user!) } // find notifications for user
+                $match: { user: new mongoose.Types.ObjectId(req.user!) }
             },
             {
-                $sort: { isRead: -1, createdAt: 1 } // sort so that isRead: false and soonest creation are first
-            },
-            {
-                $project: { // only need isRead and friend info
-                    friend: 1,
-                    isRead: 1,
+                $lookup: {
+                    from: 'friends',
+                    localField: 'friend',
+                    foreignField: '_id',
+                    as: 'friendData'
                 }
             },
+            {
+                $unwind: '$friendData'
+            },
+            {
+                $sort: { isRead: -1, 'friendData.dob': 1, createdAt: 1 }
+            },
+            {
+                $project: {
+                    friend: {
+                        _id: '$friendData._id',
+                        name: '$friendData.name',
+                        dob: '$friendData.dob',
+                        photo: '$friendData.photo'
+                    },
+                    isRead: 1
+                }
+            }
         ]);
-
-
+    
+        
         if (notifications.length > 0) { // if notifications...
-            await Notification.populate(notifications, { path: 'friend', select: '_id name dob'}); // populate friend info
             // find user's timezone for daysUntilBirthday calculation
             const userProfile = await UserProfile.findOne({ user: req.user }).select('timezone');
             let timezone = userProfile?.timezone;
@@ -32,10 +47,10 @@ export async function getNotifications (req : Request & IExtReq, res : Response)
 
             // calculate daysUntilBirthday, sort into current and past notifications based on if read
             const { current, past } = notifications.reduce((result, n) => {
-                const days = daysUntilBirthday(n.friend.dob, timezone!);
+                const days = daysFromBirthday(n.friend.dob, timezone!);
 
-                if (n.isRead === true) result.past.push({ ...n, friend: { ...n.friend.toJSON(), daysUntilBirthday: days }});
-                else if (n.isRead === false) result.current.push({ ...n, friend: { ...n.friend.toJSON(), daysUntilBirthday: days }});
+                if (n.isRead === true) result.past.push({ ...n, friend: { ...n.friend, daysUntilBirthday: days }});
+                else if (n.isRead === false) result.current.push({ ...n, friend: { ...n.friend, daysUntilBirthday: days }});
 
                 return result;
 
