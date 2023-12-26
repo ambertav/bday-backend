@@ -1,15 +1,18 @@
 import mongoose from "mongoose";
 import { Request, Response } from "express";
-import jwt, { Secret } from 'jsonwebtoken';
 import { IChangePasswordRequest, IExtReq, ILoginRequest, ISignupRequest } from "../../../interfaces/auth";
 import User, { IUserDocument } from "../models/user";
 import { IUserDetails } from "../../../interfaces/user";
 import userProfile from "../../profile/models/userProfile";
+import jwt, { Secret } from 'jsonwebtoken';
+import { createJwt } from "../services/tokenService";
 import { HTTPError, handleError, sendError, toSeconds } from "../../../utilities/utils";
 import * as signupService from '../services/signupService';
+import * as verificationService from '../services/verificationService';
 import * as tokenService from '../services/tokenService';
 import RefreshToken from "../models/refreshToken";
 import { refreshTokenCache } from "../../../utilities/cache";
+import { Transport } from "nodemailer";
 
 const { AUTH_JWT_SECRET, AUTH_JWT_EXPIRE, CONFIRM_DELETE_EXPIRE } = process.env;
 
@@ -20,7 +23,7 @@ export async function loginLocal(req: Request, res: Response) {
         email = email.toLowerCase();
         const user: IUserDocument | null = await User.findOne({ email });
         if (user && await user.checkPassword(password)) {
-            const accessToken = createJwt(user._id);
+            const accessToken = createJwt(user._id, AUTH_JWT_SECRET, AUTH_JWT_EXPIRE);
             return res.status(200).json({ accessToken });
         } else {
             throw { status: 401, message: "Invalid credentials" };
@@ -101,7 +104,7 @@ export async function deleteUser(req: Request & IExtReq, res: Response) {
     try {
         const user = await User.findById(req.user);
         if (!user) throw { status: 404, message: "User not found" };
-        const confirmationToken = createJwt(user._id, CONFIRM_DELETE_EXPIRE);
+        const confirmationToken = createJwt(user._id, AUTH_JWT_SECRET, CONFIRM_DELETE_EXPIRE);
         res.status(200).json({ confirmationToken });
     } catch (error: any) {
         if ('status' in error && 'message' in error) {
@@ -144,23 +147,22 @@ export async function confirmDeleteUser(req: Request & IExtReq, res: Response) {
 export async function signup(req: Request, res: Response) {
     try {
         const data: ISignupRequest = req.body;
-        data.email = data.email.toLowerCase();
+        data.email = data.email.toLowerCase(); // formats email to lowercase
+
+        // check for existing user
         const existingUser = await User.findOne({ email: data.email });
         if (existingUser) throw { status: 400, message: "Email already in use" };
-        const id = await signupService.signup(data);
+
+        // creates user and corresponding profile
+        const id = await signupService.signup(data); 
         if (!id) throw { status: 400, message: "User not created" };
-        res.status(201).json({ message: "User successfully created", accessToken: createJwt(id) });
+
+        // sends verification email... if no messageId, throw error
+        const result = await verificationService.sendEmailVerification(id.toString());
+        if (!result) throw { status: 400, message: 'Failed to send verification email' }
+        
+        res.status(201).json({ message: 'User successfully created and verification email sent sucessfully' });
     } catch (error: any) {
         handleError(res, error);
     }
-}
-
-
-function createJwt(payload: any, expires: any = AUTH_JWT_EXPIRE) {
-    return jwt.sign(
-        // data payload
-        { payload },
-        (AUTH_JWT_SECRET as Secret),
-        { expiresIn: expires }
-    );
 }
