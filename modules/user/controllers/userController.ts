@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import { Request, Response } from "express";
 import { IChangePasswordRequest, IExtReq, ILoginRequest, ISignupRequest } from "../../../interfaces/auth";
 import User, { IUserDocument } from "../models/user";
@@ -12,7 +11,6 @@ import * as verificationService from '../services/verificationService';
 import * as tokenService from '../services/tokenService';
 import RefreshToken from "../models/refreshToken";
 import { refreshTokenCache } from "../../../utilities/cache";
-import { Transport } from "nodemailer";
 
 const { AUTH_JWT_SECRET, AUTH_JWT_EXPIRE, CONFIRM_DELETE_EXPIRE } = process.env;
 
@@ -22,12 +20,12 @@ export async function loginLocal(req: Request, res: Response) {
         let { email, password }: ILoginRequest = req.body;
         email = email.toLowerCase();
         const user: IUserDocument | null = await User.findOne({ email });
+        if (user && user.verified === false) throw { status: 403, message: 'Must verify email' }
         if (user && await user.checkPassword(password)) {
             const accessToken = createJwt(user._id, AUTH_JWT_SECRET, AUTH_JWT_EXPIRE);
             return res.status(200).json({ accessToken });
-        } else {
-            throw { status: 401, message: "Invalid credentials" };
         }
+        else throw { status: 401, message: "Invalid credentials" };
     } catch (error: any) {
         if ('status' in error && 'message' in error) {
             sendError(res, error as HTTPError);
@@ -160,7 +158,7 @@ export async function signup(req: Request, res: Response) {
         // sends verification email... if no messageId, throw error
         const result = await verificationService.sendEmailVerification(id.toString());
         if (!result) throw { status: 400, message: 'Failed to send verification email' }
-        
+
         res.status(201).json({ message: 'User successfully created and verification email sent sucessfully' });
     } catch (error: any) {
         handleError(res, error);
