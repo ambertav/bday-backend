@@ -13,4 +13,5 @@ router.post("/confirm-delete", requireLogin, usersCtrl.confirmDeleteUser);
 router.post('/verify-email', usersCtrl.verifyEmail);
 router.post('/resend-email', usersCtrl.resendEmail);
 
+
 export default router;
