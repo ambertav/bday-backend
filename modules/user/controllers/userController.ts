@@ -165,7 +165,7 @@ export async function signup(req: Request, res: Response) {
     }
 }
 
-export async function verifyEmail(req : Request, res : Response) {
+export async function verifyEmail (req : Request, res : Response) {
     try {
         // retrieve email token
         const emailToken = req.body.token;
@@ -213,6 +213,24 @@ export async function resendEmail (req : Request, res : Response) {
         if (!result) throw { status: 400, message: 'Failed to send verification email' }
 
         return res.status(200).json({ message: 'Email resent successfully' });
+    } catch (error : any) {
+        handleError(res, error);
+    }
+}
+
+export async function handleForgotPassword (req : Request, res : Response) {
+    try {
+        const { email } = req.body;
+        if (!email) throw { status: 404, message: 'Must provide an email' };
+
+        const user = await User.findOne({ email });
+        if (!user) throw  {status: 404, message: 'User not found' };
+
+        const result = await verificationService.sendForgotPasswordEmail(user._id, user.email, user.passwordHash);
+
+        if (!result) throw { status: 400, message: 'Failed to send password reset email' }
+        return res.status(200).json({ message: 'Password reset email sent successfully' });
+
     } catch (error : any) {
         handleError(res, error);
     }

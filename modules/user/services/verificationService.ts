@@ -6,7 +6,7 @@ import { FRONTEND_BASE_URL } from '../../../utilities/constants';
 import User from '../models/user';
 
 
-const { EMAIL_SECRET, EMAIL_USER, EMAIL_JWT_EXPIRE } = process.env;
+const { EMAIL_SECRET, EMAIL_USER, EMAIL_JWT_EXPIRE, EMAIL_FORGOT_EXPIRE } = process.env;
 
 export async function sendEmailVerification (id : string) {
     try {
@@ -62,6 +62,38 @@ export async function verifyUserEmail (decodedToken : JwtPayload) {
 
         // return success message
         return 'User\'s email was verified successfully';
+
+    } catch (error : any) {
+        console.error(error);
+        throw error;
+    }
+}
+
+export async function sendForgotPasswordEmail (id : string, email : string, hash : string) {
+    try {
+        const emailToken = createJwt(
+            { 
+                sub: id, // for user identification
+                pass: hash // to ensure single use by checking if password was already changed
+            }, 
+            EMAIL_SECRET, 
+            EMAIL_FORGOT_EXPIRE,
+        );
+
+        // frontend url
+        const url = `${FRONTEND_BASE_URL}/reset-password?et=${emailToken}`;
+
+        const mailOptions : SendMailOptions = { // email info
+            from: `Presently 🎁 <${EMAIL_USER}>`,
+            to: email,
+            subject: 'Reset Password',
+            html: `Please click on this link to reset your password: <a href="${url}">${url}</a>`
+        }
+        
+        const result = await sendMail(mailOptions); // sends mail
+        
+        // if result.messageId, then successfully send email
+        return result.messageId || null;
 
     } catch (error : any) {
         console.error(error);
