@@ -3,7 +3,7 @@ import { IChangePasswordRequest, IExtReq, ILoginRequest, ISignupRequest } from "
 import User, { IUserDocument } from "../models/user";
 import { IUserDetails } from "../../../interfaces/user";
 import userProfile from "../../profile/models/userProfile";
-import jwt, { Secret } from 'jsonwebtoken';
+import jwt, { JwtPayload, Secret } from 'jsonwebtoken';
 import { createJwt } from "../services/tokenService";
 import { HTTPError, handleError, sendError, toSeconds } from "../../../utilities/utils";
 import * as signupService from '../services/signupService';
@@ -12,7 +12,7 @@ import * as tokenService from '../services/tokenService';
 import RefreshToken from "../models/refreshToken";
 import { refreshTokenCache } from "../../../utilities/cache";
 
-const { AUTH_JWT_SECRET, AUTH_JWT_EXPIRE, CONFIRM_DELETE_EXPIRE } = process.env;
+const { AUTH_JWT_SECRET, AUTH_JWT_EXPIRE, CONFIRM_DELETE_EXPIRE, EMAIL_SECRET } = process.env;
 
 
 export async function loginLocal(req: Request, res: Response) {
@@ -159,8 +159,29 @@ export async function signup(req: Request, res: Response) {
         const result = await verificationService.sendEmailVerification(id.toString());
         if (!result) throw { status: 400, message: 'Failed to send verification email' }
 
-        res.status(201).json({ message: 'User successfully created and verification email sent sucessfully' });
+        return res.status(201).json({ message: 'User successfully created and verification email sent sucessfully' });
     } catch (error: any) {
+        handleError(res, error);
+    }
+}
+
+export async function verifyEmail(req : Request, res : Response) {
+    try {
+        // retrieve email token
+        const emailToken = req.body.token;
+        if (!emailToken) throw { status: 404, message: 'No email token' }
+
+        // decode
+        const decoded = jwt.verify(emailToken.toString(), EMAIL_SECRET!) as JwtPayload;
+        // if user is already veriied, return
+        if (decoded.payload.verified=== true) throw { status: 404, message: 'User\'s email was already verified' } 
+
+        // await user verificiation and return success message 
+        const message = await verificationService.verifyUserEmail(decoded as JwtPayload);
+        if (message) return res.status(200).json({ message });
+
+    } catch (error : any) {
+        if (error instanceof jwt.TokenExpiredError) return res.status(401).json({ message: 'Token expired. Please try again' });
         handleError(res, error);
     }
 }

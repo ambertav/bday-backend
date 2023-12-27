@@ -61,6 +61,8 @@ export interface IUserDocument extends mongoose.Document, IUserMethods {
     name: string;
     passwordHash: string;
     verified: boolean;
+    updatedAt?: Date;
+    createdAt?: Date;
 }
 
 export default mongoose.model<IUserDocument>("User", userSchema);
