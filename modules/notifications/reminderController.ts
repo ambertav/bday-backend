@@ -1,13 +1,13 @@
 import { Request, Response } from 'express';
 import { IExtReq } from '../../interfaces/auth';
-import Notification from './models/notification';
+import Reminder from './models/reminder';
 import UserProfile from '../profile/models/userProfile';
 import mongoose from 'mongoose';
 import { daysFromBirthday } from '../../utilities/friendUtilities';
 
-export async function getNotifications (req : Request & IExtReq, res : Response) {
+export async function getReminders (req : Request & IExtReq, res : Response) {
     try {
-        const notifications = await Notification.aggregate([
+        const reminders = await Reminder.aggregate([
             {
                 $match: { user: new mongoose.Types.ObjectId(req.user!) }
             },
@@ -39,14 +39,14 @@ export async function getNotifications (req : Request & IExtReq, res : Response)
         ]);
     
         
-        if (notifications.length > 0) { // if notifications...
+        if (reminders.length > 0) { // if reminders...
             // find user's timezone for daysUntilBirthday calculation
             const userProfile = await UserProfile.findOne({ user: req.user }).select('timezone');
             let timezone = userProfile?.timezone;
             if (!timezone) timezone = 'UTC';
 
             // calculate daysUntilBirthday, sort into current and past notifications based on if read
-            const { current, past } = notifications.reduce((result, n) => {
+            const { current, past } = reminders.reduce((result, n) => {
                 const days = daysFromBirthday(n.friend.dob, timezone!);
 
                 if (n.isRead === true) result.past.push({ ...n, friend: { ...n.friend, daysUntilBirthday: days }});
@@ -59,7 +59,7 @@ export async function getNotifications (req : Request & IExtReq, res : Response)
             return res.status(200).json({ current, past }); // return current and past
         }
 
-        else return res.status(200).json({ message: 'No notifications' });
+        else return res.status(200).json({ message: 'No reminders' });
 
     } catch (error: any) {
         return res.status(500).json({
@@ -68,14 +68,14 @@ export async function getNotifications (req : Request & IExtReq, res : Response)
     }
 }
 
-export async function markNotiicationAsRead (req : Request & IExtReq, res : Response) {
+export async function markReminderAsRead (req : Request & IExtReq, res : Response) {
     try {
-        const updateNotifs = await Notification.updateMany(
-            { _id: { $in: req.body.notificationIds }, user: req.user! },
+        const updateReminders = await Reminder.updateMany(
+            { _id: { $in: req.body.reminderIds }, user: req.user! },
             { $set: { isRead: true } }
         );
 
-        res.status(200).json({ message: 'Notifications marked as read successfully' });
+        res.status(200).json({ message: 'Reminders marked as read successfully' });
 
     } catch (error: any) {
         return res.status(500).json({
@@ -84,13 +84,13 @@ export async function markNotiicationAsRead (req : Request & IExtReq, res : Resp
     }
 }
 
-export async function deleteNotification (req : Request & IExtReq, res : Response) {
+export async function deleteReminder (req : Request & IExtReq, res : Response) {
     try {
-        const deletedNotification = await Notification.findOneAndDelete({
+        const deletedReminder = await Reminder.findOneAndDelete({
             _id: req.params.id, user: req.user!
         });
 
-        res.status(200).json({ message: 'Notification deleted successfully' });
+        res.status(200).json({ message: 'Reminder deleted successfully' });
 
     } catch (error : any) {
         return res.status(500).json({
@@ -100,20 +100,20 @@ export async function deleteNotification (req : Request & IExtReq, res : Respons
 }
 
 
-export async function cleanNotifications () {
+export async function cleanReminders () {
     try {
         // calculate 7 days ago
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
         // find and delete notifications created more than 7 days ago
-        const result = await Notification.deleteMany({
+        const result = await Reminder.deleteMany({
             createdAt: { $lt: sevenDaysAgo },
         });
 
-        console.log(`Deleted ${result.deletedCount} notifications older than 7 days`);
+        console.log(`Deleted ${result.deletedCount} reminders older than 7 days`);
 
     } catch (error : any) {
-        console.error('Error occurred while cleaning notifications collection: ', error.message);
+        console.error('Error occurred while cleaning reminders collection: ', error.message);
     }
 }

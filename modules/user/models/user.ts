@@ -13,7 +13,11 @@ const userSchema = new mongoose.Schema({
     passwordHash: {
         type: String,
         required: true,
-    }
+    },
+    verified: {
+        type: Boolean,
+        default: false
+    },
 }, {
     timestamps: true,
     toJSON: {
@@ -56,9 +60,9 @@ export interface IUserDocument extends mongoose.Document, IUserMethods {
     email: string;
     name: string;
     passwordHash: string;
-    tel: number;
-    dob: Date;
-    gender: string;
+    verified: boolean;
+    updatedAt?: Date;
+    createdAt?: Date;
 }
 
 export default mongoose.model<IUserDocument>("User", userSchema);

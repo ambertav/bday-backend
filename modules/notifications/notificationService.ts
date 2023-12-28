@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 import Expo, { ExpoPushMessage, ExpoPushTicket } from "expo-server-sdk";
 import { ticketCache } from "../../utilities/cache";
 import userProfile from "../profile/models/userProfile";
-import Notification, { INotificationDocument } from "./models/notification";
+import Notification from "./models/notification";
+import Reminder, { IReminderDocument } from './models/reminder';
 import deviceInfo from "./models/deviceInfo";
 import Agenda from "agenda";
 
@@ -127,10 +128,10 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
                     }
                 }
             },
-            // Lookup notifications to exclude friends with recent notifications (job runs every 12 hours -- should only send once per day)
+            // Lookup reminders to exclude friends with recent reminders created
             {
                 $lookup: {
-                    from: 'notifications',
+                    from: 'reminders',
                     let: { user: '$userProfile.user', friend: '$friends._id' },
                     pipeline: [
                         {
@@ -192,27 +193,22 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
     }
 }
 
-export async function createNotifications (list: IApproachingBirthday[]) {
+export async function createReminders (list: IApproachingBirthday[]) {
     // to batch promises
     const session = await mongoose.startSession();
     session.startTransaction();
 
     // promises to create notifications from approaching birthdays
-    const notificationPromises = list.map(async (item) => {
+    const reminderPromises = list.map(async (item) => {
         try {
-            const methods = ['default'];
-            if (item.pushNotifications) methods.push('push');
-            if (item.emailNotifications) methods.push('email');
-
-            const notification = await Notification.create([
+            const reminder = await Reminder.create([
                 {
                     type: item.daysUntil,
                     user: item.userId,
                     friend: item.friendId,
-                    sent: { method: methods },
                 }], { session });
 
-              return notification[0];
+              return reminder[0];
 
         } catch (error : any) {
             console.error('Error creating notification: ', error.message);
@@ -220,11 +216,11 @@ export async function createNotifications (list: IApproachingBirthday[]) {
         }
     });
 
-    const notifications = await Promise.all(notificationPromises);
+    const reminders = await Promise.all(reminderPromises);
     await session.commitTransaction();
     session.endSession();
 
-    return notifications.filter(notification => notification !== null); // return successful notifications
+    return reminders.filter(reminder => reminder !== null); // return successful notifications
 }
 
 export async function sendExpoNotifications(list: IApproachingBirthday[]) {
@@ -276,23 +272,14 @@ export async function sendExpoNotifications(list: IApproachingBirthday[]) {
                         const device = await deviceInfo.findOne({ deviceToken: tkn })
                             if (device) {
                                 const index = pushList.findIndex(item => item.token === device.deviceToken)
-                                const currentDate = new Date();
-                                // updating previously created notification with ticketId
-                                const notificationToUpdate = await Notification.findOne({ 
-                                    userId: pushList[index].userId, 
-                                    friendId: pushList[index].friendId, 
-                                    createdAt: { // find the notification that was created within this job interval
-                                        $lt: currentDate, // created before current date and time
-                                        $gte: new Date(currentDate.getTime() - 3600000) // but no more than 1 hour old
-                                    } 
+                                const notification = await Notification.create({
+                                    userId: pushList[index].userId,
+                                    friendId: pushList[index].friendId,
+                                    ticketId: ticket.id
                                 });
-                                if (notificationToUpdate) {
-                                    notificationToUpdate.sent.ticketId = ticket.id;
-                                    await notificationToUpdate.save();
-                                }
                             }
                     } catch (error : any) {
-                        console.error('Error updating notification with ticket id: ', error);
+                        console.error('Error creating notification with ticket id: ', error);
                     }
                 }
             });
@@ -412,8 +399,8 @@ export async function startAgenda() {
         console.log("Running birthday check");
         const birthdays = await getApproachingBirthdays();
 
-        console.log('creating notifications')
-        const notifications = await createNotifications(birthdays);
+        console.log('creating reminders')
+        const reminders = await createReminders(birthdays);
 
         console.log("Sending push notifications");
         await sendExpoNotifications(birthdays);

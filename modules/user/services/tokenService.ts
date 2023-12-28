@@ -26,12 +26,12 @@ export function parseJwt(token: string) {
  * @param user payload of the token
  * @returns signed token
  */
-export function createJwt(payload: any) {
+export function createJwt (payload: any, secret : any, expires: any) {
     return jwt.sign(
         // data payload
         { payload },
-        (AUTH_JWT_SECRET as Secret),
-        { expiresIn: AUTH_JWT_EXPIRE }
+        (secret as Secret),
+        { expiresIn: expires }
     );
 }
 
@@ -79,7 +79,7 @@ export async function refreshTokens(accessToken: string, refreshToken: string): 
         // if both not found, or token is revoked throw error
         if (!storedToken || storedToken.revoked || storedToken.token !== refreshToken) throw new Error("Invalid refresh token");
         // create and sign new refresh token and accesstoken
-        const newAccessToken = createJwt((decodedAccess as JwtPayload).payload);
+        const newAccessToken = createJwt((decodedAccess as JwtPayload).payload, AUTH_JWT_SECRET, AUTH_JWT_EXPIRE);
         const newRefreshToken = createRefreshToken((decodedRefresh as JwtPayload).payload);
         // save pair in redis idempotency cache
         idempotencyCache.set(`idempotency:${key}`, JSON.stringify({ accessToken: newAccessToken, refreshToken: newRefreshToken }), 60 );
