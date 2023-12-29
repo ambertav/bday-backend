@@ -107,15 +107,15 @@ export async function sendForgotPasswordEmail (id : string, email : string) {
 
 export async function validateTokenAgainstDatabase (emailToken: string): Promise<IVerificationTokenDocument | null> {
     try {
-        const allTokens = await VerificationToken.find();
-        const validToken = await Promise.all(allTokens.map(async (token) => {
-            const isValid = await compareHash(emailToken, token.token);
-            return isValid ? token : null;
-        })).then(tokens => tokens.find(token => token !== null));
-
-        if (!validToken || validToken.expiresAt.getTime() < Date.now()) {
-            throw new Error('Token is invalid or expired');
+        const activeTokens = await VerificationToken.find({ expiresAt: { $gt: Date.now() }}); // uses expiration to narrow down search
+        let validToken : IVerificationTokenDocument | null = null; // initialize object to return
+        for (const token of activeTokens) {
+            const isValid = await compareHash(emailToken, token.token); // compare each activeToken.token hash to emailToken input
+            if (isValid) validToken = token as IVerificationTokenDocument; // if valid, return that token
+            break; // exit early if found
         }
+
+        if (!validToken) throw new Error('Token is invalid or expired');
     
         return validToken;
     } catch (error) {
