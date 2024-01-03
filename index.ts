@@ -11,7 +11,7 @@ import friendsRoute from './modules/friends/friendsRoute';
 import userProfileRoute from './modules/profile/userProfileRoute';
 import tagsRoute from './modules/tags/tagsRoute';
 import deviceInfoRoute from './modules/notifications/deviceInfoRoute';
-import notificationRoute from './modules/notifications/notificationRoute';
+import remindersRoute from './modules/notifications/remindersRoute';
 import connectDB from './utilities/db';
 import { getApproachingBirthdays, sendExpoNotifications, startAgenda } from './modules/notifications/notificationService';
 import { startTagAgenda } from './modules/tags/tagController';
@@ -24,13 +24,13 @@ export const configureApp = (middleware?: any[]) => {
 
     const app = express();
 
+    app.use(cors());
     app.use(morgan(DEBUG ? 'dev' : 'short'));
     app.use(express.json());
     app.use(express.static(path.join(__dirname, 'build')));
     app.use(sanitize());
     app.use(fileUpload());
 
-    app.use(cors());
 
     if (middleware) {
         app.use(middleware);
@@ -42,7 +42,7 @@ export const configureApp = (middleware?: any[]) => {
     app.use('/api/users/profile', userProfileRoute);
     app.use('/api/tags', tagsRoute);
     app.use('/api/device', deviceInfoRoute);
-    app.use('/api/notifications', notificationRoute);
+    app.use('/api/reminders', remindersRoute);
     // app.get('/test', async (req,res)=>{
     //    const list = await getApproachingBirthdays();
     //     await sendExpoNotifications(list);

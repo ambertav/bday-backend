@@ -17,13 +17,16 @@ export async function sendEmailVerification (id : string) {
         const user = await User.findById(id);
         if (!user) throw new Error('User not found');
 
+        if (user && user.verified) return; // return if user is already verified
+
         // creates token for verification
         const emailToken = createJwt(user._id, // for user identification
             EMAIL_SECRET, 
             EMAIL_JWT_EXPIRE,
         );
 
-        const validToken = await VerificationToken.create({
+        // saves token tp database for cross reference
+        const validToken = await VerificationToken.create({ 
             user: user._id,
             token: await hashString(emailToken),
             expiresAt: new Date((Date.now() / 1000 + toSeconds(EMAIL_JWT_EXPIRE!)!) * 1000)
@@ -73,11 +76,13 @@ export async function verifyUserEmail (emailToken : string) {
 
 export async function sendForgotPasswordEmail (id : string, email : string) {
     try {
-        const emailToken = createJwt(id, // for user identification 
+        // creates token
+        const emailToken = createJwt(id, 
             EMAIL_SECRET, 
             EMAIL_FORGOT_EXPIRE,
         );
 
+        // saves token to database for cross reference
         const validToken = await VerificationToken.create({
             user: id,
             token: await hashString(emailToken),
@@ -111,8 +116,10 @@ export async function validateTokenAgainstDatabase (emailToken: string): Promise
         let validToken : IVerificationTokenDocument | null = null; // initialize object to return
         for (const token of activeTokens) {
             const isValid = await compareHash(emailToken, token.token); // compare each activeToken.token hash to emailToken input
-            if (isValid) validToken = token as IVerificationTokenDocument; // if valid, return that token
-            break; // exit early if found
+            if (isValid) {
+                validToken = token as IVerificationTokenDocument; // if valid, return that token
+                break; // exit early if found
+            }
         }
 
         if (!validToken) throw new Error('Token is invalid or expired');
