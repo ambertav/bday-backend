@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import mongoose, { Types } from 'mongoose';
 import Friend, { IFriendDocument, IFriendResult } from './models/friend';
+import Reminder from '../notifications/models/reminder';
+import GiftRecommendation from '../recommendation/models/giftRecommendation';
 import UserProfile from '../profile/models/userProfile';
 import { IExtReq } from '../../interfaces/auth';
 import { HTTPError, sendError } from '../../utilities/utils';
@@ -8,6 +10,7 @@ import { formatFriendsData, daysUntilBirthday } from '../../utilities/friendUtil
 import Tag from '../tags/models/tag';
 import { UploadedFile } from 'express-fileupload';
 import { PutObjectCommand, s3BaseUrl, s3Client } from '../../utilities/s3upload';
+
 
 
 interface IFriendRequest {
@@ -257,13 +260,36 @@ export async function deleteFriend(req: Request & IExtReq, res: Response) {
         if (!friend) return res.status(404).json({ message: 'Friend not found' });
 
         if (friend?.user.toString() === req.user?.toString()) { // verifies that friend is associated with logged in user
-            const result = await Friend.findByIdAndDelete(req.params.id);
-            if (result) return res.status(200).json({ message: 'Friend deleted successfully' });
+            const session = await mongoose.startSession(); // start mongoose session transaction
+            session.startTransaction();
+
+            try {
+                // delete reminders associated with friend
+                await Reminder.deleteMany({ friend: friend._id }).session(session);
+
+                // delete gift recommendations associated with friend
+                await GiftRecommendation.deleteMany({ friend: friend._id }).session(session);
+
+                // finally, delete the friend
+                const result = await Friend.findByIdAndDelete(req.params.id).session(session);
+
+                if (result) { // if all operations are successful...
+                    await session.commitTransaction(); // commit transaction
+                    session.endSession();
+                    return res.status(200).json({ message: 'Friend deleted successfully' });
+                }
+            } catch (sessionError : any) {
+                // if any error during transaction...
+                await session.abortTransaction(); // abort
+                session.endSession();
+                throw sessionError; // rethrow the error
+            }
         }
 
+        // if logged in user is not associated with friend, return unauthorized
         return res.status(403).json({ message: 'User not authorized for this request' });
 
-    } catch (error: any) {
+    } catch (error : any) {
         return res.status(500).json({
             error: error.message
         });
