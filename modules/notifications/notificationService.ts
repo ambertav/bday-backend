@@ -6,30 +6,39 @@ import userProfile from "../profile/models/userProfile";
 import Notification from "./models/notification";
 import Reminder, { IReminderDocument } from './models/reminder';
 import deviceInfo from "./models/deviceInfo";
+import { sendMail } from "../../utilities/emailService";
+import { SendMailOptions } from 'nodemailer';
+import { FRONTEND_BASE_URL } from "../../utilities/constants";
 import Agenda from "agenda";
 
+const { EMAIL_USER } = process.env;
+
 export interface IApproachingBirthday {
-    userId: string;
-    email: string;
-    token: string | null;
-    friendId: string;
-    friendName: string;
-    daysUntil: number;
-    emailNotifications: boolean;
-    pushNotifications: boolean;
+    user: {
+        userId: string;
+        email: string;
+        token: string | null;
+        emailNotifications: boolean;
+        pushNotifications: boolean;
+    }
+    friends: Array<{
+        friendId: string;
+        friendName: string;
+        daysUntil: number;
+    }>
 }
 
 
 export async function getApproachingBirthdays(lastNotificationClearance: number = 24): Promise<IApproachingBirthday[]> {
     try {
-        // find users, who have either emailNotification or pushNotification set to true in their UserProfile
+        // find users
         // whose friends have an upcoming birthday within the user's preferred notification schedule, calculated according to the timezone settings in UserProfile (for each user)
         // AND who haven't been sent a Notification in more than lastNotificationClearance
         const currentDateTime = new Date();
         const notificationClearanceDateTime = new Date(currentDateTime.getTime() - lastNotificationClearance * 3600000);
-        const users = await User.aggregate([
+        const notificationList = await User.aggregate([
             {
-                // Lookup UserProfile to filter users based on notification settings
+                // lookup and unwind userProfile 
                 $lookup: {
                     from: 'userprofiles',
                     localField: '_id',
@@ -38,16 +47,7 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
                 }
             },
             { $unwind: '$userProfile' },
-            {
-                // Match users with notifications enabled
-                $match: {
-                    $or: [
-                        { 'userProfile.emailNotifications': true },
-                        { 'userProfile.pushNotifications': true }
-                    ]
-                }
-            },
-            // Lookup friends for each user
+            // Lookup and unwind friends for each user
             {
                 $lookup: {
                     from: 'friends',
@@ -128,7 +128,7 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
                     }
                 }
             },
-            // Lookup reminders to exclude friends with recent reminders created
+            // Exclude friends for whom reminders were already made
             {
                 $lookup: {
                     from: 'reminders',
@@ -146,11 +146,10 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
                             }
                         }
                     ],
-                    as: 'recentNotifications'
+                    as: 'recentReminder'
                 }
             },
-            // Exclude friends with recent notifications
-            { $match: { 'recentNotifications': { $size: 0 } } },
+            { $match: { 'recentReminder': { $size: 0 } } },
             // Lookup deviceIds for each user
             {
                 $lookup: {
@@ -161,91 +160,114 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
                 }
             },
             {
-                $unwind: { path: '$device', preserveNullAndEmptyArrays: true }
+                $unwind: { path: '$device', preserveNullAndEmptyArrays: true } // unwind if available
             },
-            // Project the final structure
+            // group list by user, and include array of applicable friends
+            {
+                $group: {
+                    _id: '$userProfile.user',
+                    user: {
+                        $first: {
+                            userId: '$userProfile.user',
+                            email: '$email',
+                            token: '$device.deviceToken',
+                            emailNotifications: '$userProfile.emailNotifications',
+                            pushNotifications: '$userProfile.pushNotifications',
+                        }
+                    },
+                    friends: {
+                        $push: {
+                            friendId: '$friends._id',
+                            friendName: '$friends.name',
+                            daysUntil: '$daysUntilBirthday'
+                        }
+                    }
+                }
+            },
+            // project final structure, see IApproachingBirthdays interface
             {
                 $project: {
-                    userId: '$userProfile.user',
-                    email: '$email',
-                    token: '$device.deviceToken',
-                    friendId: '$friends._id',
-                    friendName: '$friends.name',
-                    daysUntil: '$daysUntilBirthday',
-                    emailNotifications: '$userProfile.emailNotifications',
-                    pushNotifications: '$userProfile.pushNotifications',
+                    _id: 0,
+                    user: '$user',
+                    friends: '$friends'
                 }
             }
         ]).exec();
-        return users.map(user => ({
-            userId: user.userId.toString(),
-            email: user.email,
-            token: user.token,
-            friendId: user.friendId.toString(),
-            friendName: user.friendName,
-            daysUntil: user.daysUntil,
-            emailNotifications: user.emailNotifications,
-            pushNotifications: user.pushNotifications,
-        }));
+
+        return notificationList;
+
     } catch (error) {
         console.error(error);
         return [];
     }
 }
 
-export async function createReminders (list: IApproachingBirthday[]) {
-    // to batch promises
+export async function createReminders (item : IApproachingBirthday) {
+    // sessions over insertMany for 
     const session = await mongoose.startSession();
     session.startTransaction();
 
-    // promises to create notifications from approaching birthdays
-    const reminderPromises = list.map(async (item) => {
-        try {
-            const reminder = await Reminder.create([
-                {
-                    type: item.daysUntil,
-                    user: item.userId,
-                    friend: item.friendId,
-                }], { session });
-
-              return reminder[0];
-
-        } catch (error : any) {
-            console.error('Error creating notification: ', error.message);
-            return null;
-        }
-    });
-
-    const reminders = await Promise.all(reminderPromises);
-    await session.commitTransaction();
-    session.endSession();
-
-    return reminders.filter(reminder => reminder !== null); // return successful notifications
+    try {
+        // promises to create notifications from approaching birthdays
+        // map through user friends
+        const reminderPromises = item.friends.map(async (friend) => { 
+            try {
+                const reminder = await Reminder.create([
+                    {
+                        type: friend.daysUntil,
+                        user: item.user.userId, // user id
+                        friend: friend.friendId,
+                    }], { session });
+    
+                  return reminder[0]; // return created reminder
+    
+            } catch (error : any) {
+                console.error('Error creating reminder: ', error.message);
+                return null; // return null for failed reminder creation
+            }
+        });
+    
+        // awaiting for all reminder promises to be resolved
+        const reminders = await Promise.all(reminderPromises);
+        // check if active transaction before commiting
+        if (session.inTransaction()) await session.commitTransaction();
+    
+        return reminders.filter(reminder => reminder !== null); // return successful notifications
+    } catch (transactionError : any) {
+        // check if active transaction before aborting
+        if (session.inTransaction()) await session.abortTransaction();
+        console.error('Error creating reminders: ', transactionError.message);
+        throw transactionError; // throw error 
+    } finally {
+        // end the session
+        session.endSession();
+    }
 }
 
 export async function sendExpoNotifications(list: IApproachingBirthday[]) {
     const expo = new Expo();
     // filter only push notification allowed users
-    const pushList = list.filter(item => !!item.pushNotifications && !!item.token);
+    const pushList = list.filter(item => !!item.user.pushNotifications && !!item.user.token);
     // TODO: Choose message body randomly from pool
     const messages = [];
     for (let item of pushList) {
         let message : string = '';
 
-        // various message options depending on out many days until birthday for each notification
-        if (item.daysUntil === 30) message = `${item.friendName}'s birthday is ${item.daysUntil} days away! Get personalized gift recommendations in the Explore tab and save to their favorites for later.`;
-        else if (item.daysUntil === 7) message = `${item.friendName}'s birthday is ${item.daysUntil} days away! Venture to their favorite gifts to find the perfect one.`;
-        else if (item.daysUntil === 3) message = `${item.friendName}'s birthday is ${item.daysUntil} days away! Did you get them a gift yet?`;
-        else if (item.daysUntil === 0) message = `${item.friendName}'s birthday is today. Don't forget to tell them happy birthday!`;
-        else message =  `${item.friendName}'s birthday is ${item.daysUntil} days away!`;
+        // if user only has one friend with an approaching birthday, create customized message
+        if (item.friends.length === 1) {
+            message = `${item.friends[0].friendName}'s birthday is ${item.friends[0].daysUntil} days away! Did you get them a gift yet?`;
+        // else, create a general message to lead them to reminders page for more info
+        } else if (item.friends.length > 1) {
+            message = `You have multiple friends with birthdays approaching! Visit your reminders page to see all upcoming birthdays and make sure to get them gifts!`;
+        }
 
         messages.push({
-            to: item.token,
+            to: item.user.token,
             sound: 'default',
             body: message,
-            data: { friendId: item.friendId } // sending friend id to redirect on mobile
         });
     }
+
     let chunks = expo.chunkPushNotifications(messages as ExpoPushMessage[]);
     let tickets: ExpoPushTicket[] = [];
     let ticketsToTokensMap = new Map<number, string>();
@@ -271,10 +293,9 @@ export async function sendExpoNotifications(list: IApproachingBirthday[]) {
                     try {
                         const device = await deviceInfo.findOne({ deviceToken: tkn })
                             if (device) {
-                                const index = pushList.findIndex(item => item.token === device.deviceToken)
+                                const index = pushList.findIndex(item => item.user.token === device.deviceToken)
                                 const notification = await Notification.create({
-                                    userId: pushList[index].userId,
-                                    friendId: pushList[index].friendId,
+                                    user: pushList[index].user.userId,
                                     ticketId: ticket.id
                                 });
                             }
@@ -393,19 +414,28 @@ function reviver(key: any, value: any) {
     return value;
 }
 
+export async function sendEmailNotifications (list : IApproachingBirthday[]) {
+
+}
+
 export async function startAgenda() {
     const agenda = new Agenda({ db: { address: process.env.DATABASE_URL!, collection: 'Jobs' } });
     agenda.define('send birthday reminders', async () => {
-        console.log("Running birthday check");
+        console.log('running birthday check');
         const birthdays = await getApproachingBirthdays();
 
-        console.log('creating reminders')
-        const reminders = await createReminders(birthdays);
-
-        console.log("Sending push notifications");
-        await sendExpoNotifications(birthdays);
-
-        // email notifications
+        if (birthdays.length) {
+            // map birthday list and run create reminders for each user
+            console.log('creating reminders');
+            await Promise.all(birthdays.map(item => createReminders(item)));
+    
+            console.log('sending push notifications');
+            await sendExpoNotifications(birthdays);
+    
+            // email notifications
+            // console.log('Sending email notifications')
+            // await sendEmailNotifications(birthdays);
+        }
 
         console.log('Done');
     });
