@@ -12,10 +12,6 @@ const notificationSchema = new mongoose.Schema({
         required: true,
         ref: 'User'
     },
-    friend: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Friend'
-    },
     dateSent: {
         type: Date,
         required: true,
@@ -24,6 +20,10 @@ const notificationSchema = new mongoose.Schema({
     ticketId: {
         type: String,
         default: '',
+    },
+    messageId: {
+        type: String,
+        default: ''
     }
 },
 {
