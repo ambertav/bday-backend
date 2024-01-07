@@ -9,6 +9,7 @@ import deviceInfo from "./models/deviceInfo";
 import { sendMail } from "../../utilities/emailService";
 import { SendMailOptions } from 'nodemailer';
 import { FRONTEND_BASE_URL } from "../../utilities/constants";
+import { capitalizeFirstLetter } from '../../utilities/utils';
 import Agenda from "agenda";
 
 const { EMAIL_USER } = process.env;
@@ -16,6 +17,7 @@ const { EMAIL_USER } = process.env;
 export interface IApproachingBirthday {
     user: {
         userId: string;
+        userName: string;
         email: string;
         token: string | null;
         emailNotifications: boolean;
@@ -169,6 +171,7 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
                     user: {
                         $first: {
                             userId: '$userProfile.user',
+                            userName: '$userProfile.name',
                             email: '$email',
                             token: '$device.deviceToken',
                             emailNotifications: '$userProfile.emailNotifications',
@@ -179,7 +182,7 @@ export async function getApproachingBirthdays(lastNotificationClearance: number 
                         $push: {
                             friendId: '$friends._id',
                             friendName: '$friends.name',
-                            daysUntil: '$daysUntilBirthday'
+                            daysUntil: '$daysUntilBirthday',
                         }
                     }
                 }
@@ -255,7 +258,7 @@ export async function sendExpoNotifications(list: IApproachingBirthday[]) {
 
         // if user only has one friend with an approaching birthday, create customized message
         if (item.friends.length === 1) {
-            message = `${item.friends[0].friendName}'s birthday is ${item.friends[0].daysUntil} days away! Did you get them a gift yet?`;
+            message = `${capitalizeFirstLetter(item.friends[0].friendName)}'s birthday is ${item.friends[0].daysUntil} days away! Did you get them a gift yet?`;
         // else, create a general message to lead them to reminders page for more info
         } else if (item.friends.length > 1) {
             message = `You have multiple friends with birthdays approaching! Visit your reminders page to see all upcoming birthdays and make sure to get them gifts!`;
@@ -414,8 +417,61 @@ function reviver(key: any, value: any) {
     return value;
 }
 
-export async function sendEmailNotifications (list : IApproachingBirthday[]) {
+export async function sendEmailNotifications (item : IApproachingBirthday) {
+    try {
+        // format html body for email
+        const htmlBody = generateEmailBody(item);
 
+        // configure email
+        const mailOptions : SendMailOptions = {
+            from: `Presently 🎁 <${EMAIL_USER}>`,
+            to: item.user.email,
+            subject: 'Presently Birthday Reminders',
+            html: htmlBody
+        }
+
+        const result = await sendMail(mailOptions); // send mail
+
+        // if no result.messageId, email was not successful
+        if (!result.messageId) throw new Error('Email was not successfully sent');
+
+        try {
+            // create notification record of email sent
+            const notification = await Notification.create({
+                user: item.user.userId,
+                type: 'email',
+                messageId: result.messageId // save messageId from successful result
+            });
+
+
+        } catch (notificationError : any) {
+            console.error('Error creating notification: ', notificationError.message);
+        }
+
+    } catch (error : any) {
+        console.error('Error sending email:', error.message);
+    }
+}
+
+function generateEmailBody (item : IApproachingBirthday) {
+    // choose maximum first three to render in email body
+    const friendsToRender = item.friends.slice(0, 3);
+
+    // create cards of friend info
+    const friendCards = friendsToRender.map(friend => `
+    <div>
+        <h3>${capitalizeFirstLetter(friend.friendName)}</h3>
+        <p>Days until birthday: ${friend.daysUntil}</p>
+        <a href="${FRONTEND_BASE_URL}/friend/${friend.friendId}">Get personalized gift recommendations</a>
+    </div>
+`).join('');
+
+    // format final html structure and include cards
+    return `
+    <p>Hi ${capitalizeFirstLetter(item.user.userName)},</p>
+    <p>Here are upcoming birthdays:</p>
+    ${friendCards}
+    <p>Click <a href="${FRONTEND_BASE_URL}/reminders">here</a> to view all reminders</p>`
 }
 
 export async function startAgenda() {
@@ -432,13 +488,16 @@ export async function startAgenda() {
             console.log('sending push notifications');
             await sendExpoNotifications(birthdays);
     
-            // email notifications
-            // console.log('Sending email notifications')
-            // await sendEmailNotifications(birthdays);
+            // map birthday list and run send emails for each user
+            console.log('Sending email notifications');
+            // filtering to reduce overhead of function calls
+            const itemsToSendEmails = birthdays.filter(item => item.user.emailNotifications);
+            // call function only on items with emailNotifications = true
+            await Promise.all(itemsToSendEmails.map(item => sendEmailNotifications(item)));
         }
 
         console.log('Done');
     });
     await agenda.start();
-    await agenda.every('1 minute', 'send birthday reminders');
+    await agenda.every('24 hours', 'send birthday reminders');
 }
