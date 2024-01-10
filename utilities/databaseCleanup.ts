@@ -1,5 +1,6 @@
-import Tag from '../modules/tags/models/tag';
+import Friend from '../modules/friends/models/friend';
 import Notification from '../modules/notifications/models/notification';
+import Tag from '../modules/tags/models/tag';
 import Reminder from '../modules/notifications/models/reminder';
 import VerificationToken from '../modules/user/models/verificationToken';
 import Agenda from 'agenda';
@@ -210,6 +211,60 @@ export async function cleanOutdatedReminders() {
     }
 }
 
+export async function resetFriendHasGift () {
+    try {
+        // auto resets hasGift 5 days after friend's birthday passes in preparation for next birthday
+        const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+
+        /* 
+            Aggregation pipeline logic:
+                using day of the year for comparison between dob and fiveDaysAgo
+
+                to account for change of December into January
+                    if dob month is December && fiveDaysAgo month is January -->
+                        add 365 days to the fiveDaysAgo day of the year value
+        */
+
+        const updateResult = await Friend.updateMany(
+            {
+                $expr: {
+                    $gte: [
+                        {
+                            $cond: {
+                                if: {
+                                    $and: [
+                                        // if dob month is in december
+                                        { $eq: [{ $month: { date: '$dob', timezone: 'UTC' } }, 12] }, 
+                                        // and fiveDaysAgo date month is in January
+                                        { $eq: [{ $month: { date: fiveDaysAgo, timezone: 'UTC' } }, 1] },
+                                    ],
+                                },
+                                // then add 365 days to fiveDaysAgo
+                                then: { $add: [{ $dayOfYear: { date: fiveDaysAgo, timezone: 'UTC' } }, 365] },
+                                // else just use the standard day of the year
+                                else: { $dayOfYear: { date: fiveDaysAgo, timezone: 'UTC' } },
+                            },
+                        },
+                        // compare with the day of the year of dob
+                        { $dayOfYear: { date: '$dob', timezone: 'UTC' } }
+                    ],
+                },
+                hasGift: true, // check if friend hasGift is set to true
+            },
+            {
+              // Set hasGift to false for the found friends
+              $set: { hasGift: false },
+            }
+        );
+
+        if (updateResult.modifiedCount === 0) console.log('No friends found to reset hasGift');
+        else console.log(`${updateResult.modifiedCount} friend(s) hasGift fields were reset successfully`);
+
+    } catch (error : any) {
+        console.error('Error occurred while reseting friend hasGift field: ', error.message);
+    }
+}
+
 
 export async function startCleanupAgenda() {
     const agenda = new Agenda({
@@ -230,6 +285,9 @@ export async function startCleanupAgenda() {
 
         console.log('running outdated reminders cleanup');
         await cleanOutdatedReminders();
+
+        console.log('running hasGift reset');
+        await resetFriendHasGift();
 
         console.log('Done');
     });
