@@ -14,7 +14,7 @@ import deviceInfoRoute from './modules/notifications/deviceInfoRoute';
 import remindersRoute from './modules/notifications/remindersRoute';
 import connectDB from './utilities/db';
 import { getApproachingBirthdays, sendExpoNotifications, startAgenda } from './modules/notifications/notificationService';
-import { startTagAgenda } from './modules/tags/tagController';
+import { startCleanupAgenda } from './utilities/databaseCleanup';
 
 
 const DEBUG = process.env.NODE_ENV ? process.env.NODE_ENV.toLocaleLowerCase() !== 'production' : true; // Fix DEBUG logic
@@ -57,7 +57,7 @@ const app = configureApp([bearer]);
 
 (async () => {
     await startAgenda(); // send birthday reminders
-    await startTagAgenda(); // tag cleanup 
+    await startCleanupAgenda(); // database cleanup (tag, notification, reminder, and verification token collections) 
   })();
   
 
