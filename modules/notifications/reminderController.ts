@@ -31,7 +31,8 @@ export async function getReminders (req : Request & IExtReq, res : Response) {
                         _id: '$friendData._id',
                         name: '$friendData.name',
                         dob: '$friendData.dob',
-                        photo: '$friendData.photo'
+                        photo: '$friendData.photo',
+                        hasGift: '$friendData.hasGift',
                     },
                     isRead: 1
                 }
