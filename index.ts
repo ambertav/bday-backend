@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import cors from 'cors';
 import fileUpload from 'express-fileupload';
 import sanitize from 'express-mongo-sanitize';
+import cookieParser from 'cookie-parser';
 import bearer from './middleware/bearer';
 import usersRoute from './modules/user/routes/usersRoute';
 import friendsRoute from './modules/friends/friendsRoute';
@@ -24,12 +25,17 @@ export const configureApp = (middleware?: any[]) => {
 
     const app = express();
 
-    app.use(cors());
+    app.use(cors({
+        origin: 'http://localhost:3000',
+        credentials: true,
+    }));
     app.use(morgan(DEBUG ? 'dev' : 'short'));
     app.use(express.json());
     app.use(express.static(path.join(__dirname, 'build')));
     app.use(sanitize());
     app.use(fileUpload());
+    app.use(cookieParser());
+
 
 
     if (middleware) {
