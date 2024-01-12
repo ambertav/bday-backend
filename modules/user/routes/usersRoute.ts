@@ -5,7 +5,10 @@ import requireLogin from "../../../middleware/requireLogin";
 const router = Router();
 
 router.post("/", usersCtrl.signup);
-router.post("/login", usersCtrl.loginLocal);
+router.post("/login", usersCtrl.webLogin);
+router.post("/mobile/login", usersCtrl.mobileLogin);
+router.post("/refresh", usersCtrl.refresh);
+router.get("/logout", usersCtrl.logout);
 router.put("/password", requireLogin, usersCtrl.updatePassword);
 router.put("/", requireLogin, usersCtrl.updateUserDetails);
 router.delete("/", requireLogin, usersCtrl.deleteUser);
