@@ -1,6 +1,7 @@
 import jwt, { JwtPayload, Secret } from 'jsonwebtoken';
 import { digest } from '../../../utilities/cryptoService';
-import RefreshToken from '../models/refreshToken';
+import { hashString, compareHash } from '../../../utilities/cryptoService';
+import RefreshToken, { IRefreshTokenDocument } from '../models/refreshToken';
 import { toSeconds } from '../../../utilities/utils';
 import { idempotencyCache, lockCache, refreshTokenCache } from '../../../utilities/cache';
 
@@ -41,6 +42,22 @@ export function createRefreshToken(payload: any) {
         (AUTH_REFRESH_SECRET as Secret),
         { expiresIn: AUTH_REFRESH_EXPIRE }
     );
+
+}
+
+export async function saveRefreshToken (token : string, userId : string) {
+    try {
+        const savedRefreshToken = await RefreshToken.create({
+            user: userId,
+            token: await hashString(token),
+            expires: new Date((Date.now() / 1000 + toSeconds(AUTH_REFRESH_EXPIRE!)!) * 1000)
+        });
+
+        return true;
+    } catch (error : any) {
+        console.error(error);
+        throw error;
+    }
 }
 
 /**
@@ -51,16 +68,13 @@ export function createRefreshToken(payload: any) {
  * @param refreshToken 
  * @returns 
  */
-export async function refreshTokens(accessToken: string, refreshToken: string): Promise<{ accessToken: string; refreshToken: string; } | undefined> {
+export async function refreshTokens(accessToken: string, refreshToken: string, requestUser : string): Promise<{ accessToken: string; refreshToken: string; } | undefined> {
+    // creates key to implement lock preventing multiple / concurrent requests
     const key = digest(accessToken + "::" + refreshToken);
-    const storedPair = idempotencyCache.get(`idempotency:${key}`);
-        if (storedPair) {
-            // if found return parsed pair
-            return JSON.parse(storedPair as string);
-        }
     if (lockCache.get(key)) {
         throw new Error("Couldn't acquire lock");
     }
+    // sets lock
     lockCache.set(key, 'lock', 60);
     try {
         // verify signature and expiration on refresh token
@@ -72,24 +86,29 @@ export async function refreshTokens(accessToken: string, refreshToken: string): 
         // check redis cache for stored refresh token
         const cachedToken = refreshTokenCache.get(`refresh:${(decodedAccess as JwtPayload).payload}`);
         let storedToken = cachedToken ? JSON.parse(cachedToken as string) : null;
-        // if not found, chceck db for refresh token
-        if (!storedToken) {
-            storedToken = await RefreshToken.findOne({ token: refreshToken });
-        }
+
+        // if not found, check db for refresh token
+        if (!storedToken) storedToken = await validateTokenAgainstDatabase(refreshToken, requestUser);
+
         // if both not found, or token is revoked throw error
-        if (!storedToken || storedToken.revoked || storedToken.token !== refreshToken) throw new Error("Invalid refresh token");
+        if (!storedToken || storedToken.revoked) throw new Error("Invalid refresh token");
+
         // create and sign new refresh token and accesstoken
         const newAccessToken = createJwt((decodedAccess as JwtPayload).payload, AUTH_JWT_SECRET, AUTH_JWT_EXPIRE);
         const newRefreshToken = createRefreshToken((decodedRefresh as JwtPayload).payload);
+
         // save pair in redis idempotency cache
         idempotencyCache.set(`idempotency:${key}`, JSON.stringify({ accessToken: newAccessToken, refreshToken: newRefreshToken }), 60 );
+
         // save refresh token in redis refresh token cache
-        storedToken.token = newRefreshToken;
-        refreshTokenCache.set(`refresh:${(decodedAccess as JwtPayload).payload}`, JSON.stringify(storedToken),  toSeconds(AUTH_JWT_EXPIRE!)! * 2 );
-        // save refresh token in db
-        await RefreshToken.findOneAndUpdate({ token: refreshToken }, { token: newRefreshToken, expires: new Date(parseJwt(newRefreshToken).exp * 1000) });
+        refreshTokenCache.set(`refresh:${(decodedAccess as JwtPayload).payload}`, JSON.stringify({ token: storedToken.token, revoked: false }),  toSeconds(AUTH_JWT_EXPIRE!)! * 2 );
+
+        // update refresh token in db with new refresh token value
+        await RefreshToken.findOneAndUpdate({ user: requestUser }, { token: await hashString(newRefreshToken), expires: new Date(parseJwt(newRefreshToken).exp * 1000) });
+
         // return pair
         return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+
     } catch (error) {
         console.error(error);
         throw error;
@@ -107,5 +126,35 @@ export function getUserFromToken(token: string) {
         return decoded.payload;
     } catch (error) {
         return null;
+    }
+}
+
+export async function validateTokenAgainstDatabase (refreshToken : string, user : string): Promise<IRefreshTokenDocument | null> {
+    try {
+
+        let isValid : boolean = false;
+        let storedToken : IRefreshTokenDocument | null = null;
+
+        // searches based on user, expiration, and revokation status to narrow down search
+        // on off chance multiple tokens are active, use find and then iterate through for comparison
+        const activeTokens = await RefreshToken.find({ user, expires: { $gt: Date.now() }, revoked: false });
+
+        // if no active tokens, return null
+        if (activeTokens.length === 0) return null;
+
+        // iterate through and compare hashed tokens to received refresh token
+        for (const token of activeTokens) {
+            isValid  = await compareHash(refreshToken, token.token);
+            if (isValid) {
+                // if found, assign and break early
+                storedToken = token;
+                break;
+            }
+        }
+
+        return storedToken;
+        
+    } catch (error) {
+        throw new Error('Failed to validate token against the database');
     }
 }
