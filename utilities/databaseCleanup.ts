@@ -1,6 +1,7 @@
 import Friend from '../modules/friends/models/friend';
 import Notification from '../modules/notifications/models/notification';
 import Tag from '../modules/tags/models/tag';
+import RefreshToken from '../modules/user/models/refreshToken';
 import Reminder from '../modules/notifications/models/reminder';
 import VerificationToken from '../modules/user/models/verificationToken';
 import Agenda from 'agenda';
@@ -60,6 +61,20 @@ export async function cleanVerificationTokens() {
 
     } catch (error: any) {
         console.error('Error occured while cleaning verification token collection: ', error.message);
+    }
+}
+
+export async function cleanRefreshTokens() {
+    try {
+        const currentDateTime = new Date();
+
+        const deletedTokens = await RefreshToken.deleteMany({ expiresAt: { $lt: currentDateTime } });
+
+        if (deletedTokens.deletedCount === 0) console.log('No expired tokens found');
+        else console.log(`Deleted ${deletedTokens.deletedCount} expired refresh tokens`);
+
+    } catch (error: any) {
+        console.error('Error occured while cleaning refresh token collection: ', error.message);
     }
 }
 
@@ -279,6 +294,9 @@ export async function startCleanupAgenda() {
 
         console.log('running expired verification token cleanup');
         await cleanVerificationTokens();
+
+        console.log('running expired refresh token cleanup'); 
+        await cleanRefreshTokens();
 
         console.log('running outdated notifications cleanup');
         await cleanOutdatedNotifications();
