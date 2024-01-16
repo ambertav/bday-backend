@@ -85,7 +85,7 @@ export async function loginLocal(email : string, password : string) {
     }
 }
 
-export async function refresh (req : Request & IExtReq, res : Response) {
+export async function refresh (req : Request, res : Response) {
     try {
         // extract device to handle getting refresh token differently across mobile and web
         const { device } = req.body; 
@@ -101,17 +101,12 @@ export async function refresh (req : Request & IExtReq, res : Response) {
         // if either token is missing, throw error to notify frontend to request logout
         if (refreshToken === undefined || accessToken === undefined) throw { status: 403, message: 'Missing tokens, user will be logged out' };
 
-        // 
         const tokenUser : JwtPayload = jwt.decode(accessToken) as JwtPayload;
-
-        // if the user from accessToken doesn't match user that made request...
-        // throw error to signal for logout
-        if (tokenUser!.payload !== req.user) throw { status: 403, message: 'Forbidden' }
 
         // intialization and type declarations of return object
         let newTokens : { accessToken : string, refreshToken : string } | undefined;
         // retrieve new token pairs
-        newTokens = await tokenService.refreshTokens(accessToken, refreshToken, req.user!);
+        newTokens = await tokenService.refreshTokens(accessToken, refreshToken, tokenUser.payload);
         // if no pair, throw error
         if (newTokens === undefined) throw { status: 500, message: 'Error occured while refreshing tokens' }
 

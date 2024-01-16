@@ -104,7 +104,7 @@ export async function refreshTokens(accessToken: string, refreshToken: string, r
         refreshTokenCache.set(`refresh:${(decodedAccess as JwtPayload).payload}`, JSON.stringify({ token: storedToken.token, revoked: false }),  toSeconds(AUTH_JWT_EXPIRE!)! * 2 );
 
         // update refresh token in db with new refresh token value
-        await RefreshToken.findOneAndUpdate({ user: requestUser }, { token: await hashString(newRefreshToken), expires: new Date(parseJwt(newRefreshToken).exp * 1000) });
+        await RefreshToken.findOneAndUpdate({ user: requestUser, revoked: false }, { token: await hashString(newRefreshToken), expires: new Date(parseJwt(newRefreshToken).exp * 1000) });
 
         // return pair
         return { accessToken: newAccessToken, refreshToken: newRefreshToken };
