@@ -92,7 +92,7 @@ export async function refresh (req : Request, res : Response) {
         let refreshToken : string | undefined = ''; // initialize refresh token
 
         // if mobile, extract refresh token from request
-        if (device === 'mobile') refreshToken = req.get('Refresh');
+        if (device === 'mobile') refreshToken = req.get('Refresh')?.split(" ")[1];
         // if web, extract refresh token from cookies
         else if (device === 'web') refreshToken = req.cookies.jwt; 
         // get access token
@@ -138,9 +138,15 @@ export async function refresh (req : Request, res : Response) {
 }
 
 export async function logout (req : Request & IExtReq, res : Response) {
-    // extract refresh token
-    const refreshToken = req.cookies.jwt;
-    if (!refreshToken) return res.sendStatus(204); // if no cookies return
+    let refreshToken : string | undefined = ''; // initialize refresh token
+
+    // extract refresh token from mobile
+    if (req.get('Refresh')) refreshToken = req.get('Refresh')?.split(" ")[1];
+
+    // extract refresh token from web
+    else refreshToken = req.cookies.jwt;
+    
+    if (!refreshToken) return res.sendStatus(204); // if no token return
 
     // search for token in db
     let tokenToBlacklist : IRefreshTokenDocument | null = await tokenService.validateTokenAgainstDatabase(refreshToken, req.user!);
