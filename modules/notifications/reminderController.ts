@@ -31,7 +31,8 @@ export async function getReminders (req : Request & IExtReq, res : Response) {
                         _id: '$friendData._id',
                         name: '$friendData.name',
                         dob: '$friendData.dob',
-                        photo: '$friendData.photo'
+                        photo: '$friendData.photo',
+                        hasGift: '$friendData.hasGift',
                     },
                     isRead: 1
                 }
@@ -96,24 +97,5 @@ export async function deleteReminder (req : Request & IExtReq, res : Response) {
         return res.status(500).json({
             error: error.message
         });
-    }
-}
-
-
-export async function cleanReminders () {
-    try {
-        // calculate 7 days ago
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-        // find and delete notifications created more than 7 days ago
-        const result = await Reminder.deleteMany({
-            createdAt: { $lt: sevenDaysAgo },
-        });
-
-        console.log(`Deleted ${result.deletedCount} reminders older than 7 days`);
-
-    } catch (error : any) {
-        console.error('Error occurred while cleaning reminders collection: ', error.message);
     }
 }

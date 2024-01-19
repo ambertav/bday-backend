@@ -20,6 +20,7 @@ interface IFriendRequest {
     dob: Date;
     photo: string;
     includeInNotifications: boolean;
+    hasGift: boolean;
     tags: mongoose.Types.ObjectId[],
     giftPreferences: string[];
 }

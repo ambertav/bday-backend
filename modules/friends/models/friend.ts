@@ -30,6 +30,10 @@ const friendSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    hasGift: {
+        type: Boolean,
+        default: false,
+    },
     tags: [
         {
             type: mongoose.Schema.Types.ObjectId,
@@ -82,6 +86,7 @@ export interface IFriendDocument extends mongoose.Document {
     dob: Date;
     photo: string;
     includeInNotifications: boolean;
+    hasGift: boolean;
     tags: mongoose.Types.ObjectId[];
     user: mongoose.Types.ObjectId;
     giftPreferences: string[];

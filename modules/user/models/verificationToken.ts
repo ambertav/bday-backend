@@ -1,5 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 
+// intended to be a whitelist
 const verificationTokenSchema = new Schema({
     user: {
         type: Schema.Types.ObjectId,

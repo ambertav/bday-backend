@@ -5,36 +5,159 @@ import VerificationToken from "../models/verificationToken";
 import { IUserDetails } from "../../../interfaces/user";
 import userProfile from "../../profile/models/userProfile";
 import jwt, { JwtPayload, Secret } from 'jsonwebtoken';
-import { createJwt } from "../services/tokenService";
-import { HTTPError, handleError, sendError, toSeconds } from "../../../utilities/utils";
+import { HTTPError, handleError, sendError } from "../../../utilities/utils";
 import * as signupService from '../services/signupService';
 import * as verificationService from '../services/verificationService';
 import * as tokenService from '../services/tokenService';
-import RefreshToken from "../models/refreshToken";
-import { refreshTokenCache } from "../../../utilities/cache";
-import user from "../models/user";
+import { IRefreshTokenDocument } from "../models/refreshToken";
 
-const { AUTH_JWT_SECRET, AUTH_JWT_EXPIRE, CONFIRM_DELETE_EXPIRE, EMAIL_SECRET } = process.env;
+const { AUTH_JWT_SECRET, AUTH_JWT_EXPIRE, AUTH_REFRESH_SECRET, CONFIRM_DELETE_EXPIRE, EMAIL_SECRET } = process.env;
 
-
-export async function loginLocal(req: Request, res: Response) {
+export async function mobileLogin(req : Request, res : Response) {
     try {
-        let { email, password }: ILoginRequest = req.body;
-        email = email.toLowerCase();
-        const user: IUserDocument | null = await User.findOne({ email });
-        if (user && user.verified === false) throw { status: 403, message: 'Must verify email' }
-        if (user && await user.checkPassword(password)) {
-            const accessToken = createJwt(user._id, AUTH_JWT_SECRET, AUTH_JWT_EXPIRE);
-            return res.status(200).json({ accessToken });
-        }
-        else throw { status: 401, message: "Invalid credentials" };
-    } catch (error: any) {
+        let { email, password } : ILoginRequest = req.body;
+        const { accessToken, refreshToken } = await loginLocal(email.toLowerCase(), password);
+
+        // sends both tokens
+        return res.status(200).json({ accessToken, refreshToken });
+
+    } catch (error : any) {
         if ('status' in error && 'message' in error) {
             sendError(res, error as HTTPError);
         } else {
             return res.status(500).json({ message: error.message });
         }
     }
+}
+
+export async function webLogin(req : Request, res : Response) {
+    try {
+        let { email, password } : ILoginRequest = req.body;
+        const { accessToken, refreshToken } = await loginLocal(email.toLowerCase(), password);
+
+        // sends refreshToken as httpOnly cookie
+        res.cookie('jwt', refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+            domain: 'localhost',
+            path: '/'
+        });
+
+        // sends accessToken
+        return res.status(200).json({ accessToken });
+
+    } catch (error : any) {
+        if ('status' in error && 'message' in error) {
+            sendError(res, error as HTTPError);
+        } else {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+}
+
+export async function loginLocal(email : string, password : string) {
+    try {
+        // finds user
+        const user: IUserDocument | null = await User.findOne({ email });
+        // enforces email verification
+        if (user && user.verified === false) throw { status: 403, message: 'Must verify email' }
+
+        // verifies password input 
+        if (user && await user.checkPassword(password)) {
+            // creates tokens
+            const accessToken = tokenService.createJwt(user._id, AUTH_JWT_SECRET, AUTH_JWT_EXPIRE);
+            const refreshToken = tokenService.createRefreshToken(user._id);
+
+            // create refresh token in db with hashed value
+            const savedRefreshToken = await tokenService.saveRefreshToken(refreshToken, user._id);
+            if (!savedRefreshToken) throw new Error('Error with saved refresh token');
+
+            return { accessToken, refreshToken };
+        }
+
+        // if no user or invalid password verification, throw error
+        else throw { status: 401, message: "Invalid credentials" };
+
+    } catch (error: any) {
+        throw error;
+    }
+}
+
+export async function refresh (req : Request, res : Response) {
+    try {
+        // extract device to handle getting refresh token differently across mobile and web
+        const { device } = req.body; 
+        let refreshToken : string | undefined = ''; // initialize refresh token
+
+        // if mobile, extract refresh token from request
+        if (device === 'mobile') refreshToken = req.get('Refresh')?.split(" ")[1];
+        // if web, extract refresh token from cookies
+        else if (device === 'web') refreshToken = req.cookies.jwt; 
+        // get access token
+        const accessToken : string | undefined = req.get('Authorization')?.split(" ")[1];
+
+        // if either token is missing, throw error to notify frontend to request logout
+        if (refreshToken === undefined || accessToken === undefined) throw { status: 403, message: 'Missing tokens, user will be logged out' };
+
+        const tokenUser : JwtPayload = jwt.decode(accessToken) as JwtPayload;
+
+        // intialization and type declarations of return object
+        let newTokens : { accessToken : string, refreshToken : string } | undefined;
+        // retrieve new token pairs
+        newTokens = await tokenService.refreshTokens(accessToken, refreshToken, tokenUser.payload);
+        // if no pair, throw error
+        if (newTokens === undefined) throw { status: 500, message: 'Error occured while refreshing tokens' }
+
+        // if mobile, send both tokens
+        if (device === 'mobile') return res.status(200).json({ accessToken: newTokens.accessToken, refreshToken: newTokens.refreshToken });
+
+        // else if web, set httpOnly cookie and send accessToken
+        else if (device === 'web') {
+            res.cookie('jwt', newTokens.refreshToken, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none',
+                maxAge: 7 * 24 * 60 * 60 * 1000,
+                domain: 'localhost',
+                path: '/'
+            });
+    
+            return res.status(200).json({ accessToken: newTokens.accessToken });
+        }
+
+    } catch (error : any) {
+        console.error(error);
+        if ('status' in error && 'message' in error) {
+            sendError(res, error as HTTPError);
+        } else {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+}
+
+export async function logout (req : Request & IExtReq, res : Response) {
+    let refreshToken : string | undefined = ''; // initialize refresh token
+
+    // extract refresh token from mobile
+    if (req.get('Refresh')) refreshToken = req.get('Refresh')?.split(" ")[1];
+
+    // extract refresh token from web
+    else refreshToken = req.cookies.jwt;
+    
+    if (!refreshToken) return res.sendStatus(204); // if no token return
+
+    // search for token in db
+    let tokenToBlacklist : IRefreshTokenDocument | null = await tokenService.validateTokenAgainstDatabase(refreshToken, req.user!);
+
+    // if found in database, set revoke to true
+    if (tokenToBlacklist) await tokenToBlacklist?.revoke();
+
+    // clear the cookie
+    res.clearCookie('jwt', {  httpOnly: true, secure: true, sameSite: 'none' });
+
+    res.status(200).json({ message: 'Cookie cleared' });
 }
 
 
@@ -104,7 +227,7 @@ export async function deleteUser(req: Request & IExtReq, res: Response) {
     try {
         const user = await User.findById(req.user);
         if (!user) throw { status: 404, message: "User not found" };
-        const confirmationToken = createJwt(user._id, AUTH_JWT_SECRET, CONFIRM_DELETE_EXPIRE);
+        const confirmationToken = tokenService.createJwt(user._id, AUTH_JWT_SECRET, CONFIRM_DELETE_EXPIRE);
         res.status(200).json({ confirmationToken });
     } catch (error: any) {
         if ('status' in error && 'message' in error) {

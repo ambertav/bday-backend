@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import cors from 'cors';
 import fileUpload from 'express-fileupload';
 import sanitize from 'express-mongo-sanitize';
+import cookieParser from 'cookie-parser';
 import bearer from './middleware/bearer';
 import usersRoute from './modules/user/routes/usersRoute';
 import friendsRoute from './modules/friends/friendsRoute';
@@ -14,7 +15,7 @@ import deviceInfoRoute from './modules/notifications/deviceInfoRoute';
 import remindersRoute from './modules/notifications/remindersRoute';
 import connectDB from './utilities/db';
 import { getApproachingBirthdays, sendExpoNotifications, startAgenda } from './modules/notifications/notificationService';
-import { startTagAgenda } from './modules/tags/tagController';
+import { startCleanupAgenda } from './utilities/databaseCleanup';
 
 
 const DEBUG = process.env.NODE_ENV ? process.env.NODE_ENV.toLocaleLowerCase() !== 'production' : true; // Fix DEBUG logic
@@ -24,12 +25,17 @@ export const configureApp = (middleware?: any[]) => {
 
     const app = express();
 
-    app.use(cors());
+    app.use(cors({
+        origin: 'http://localhost:3000',
+        credentials: true,
+    }));
     app.use(morgan(DEBUG ? 'dev' : 'short'));
     app.use(express.json());
     app.use(express.static(path.join(__dirname, 'build')));
     app.use(sanitize());
     app.use(fileUpload());
+    app.use(cookieParser());
+
 
 
     if (middleware) {
@@ -57,7 +63,7 @@ const app = configureApp([bearer]);
 
 (async () => {
     await startAgenda(); // send birthday reminders
-    await startTagAgenda(); // tag cleanup 
+    await startCleanupAgenda(); // database cleanup (tag, notification, reminder, and verification token collections) 
   })();
   
 
