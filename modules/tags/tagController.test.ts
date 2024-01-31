@@ -22,10 +22,13 @@ afterAll(async () => {
 
 
 describe('GET /api/tags/', () => {
-    it('should return all tags', async () => {
+    it('should return all default tags', async () => {
+        const count = await Tag.countDocuments({ type: { $ne: 'custom' } });
         const response = await request(app)
-            .get('/api/tags/');
-        
-        expect(response.statusCode).toBe(200);
+            .get('/api/tags/')
+            .expect(200);
+
+        expect(response.body.length).toEqual(count);
     });
 });
+
