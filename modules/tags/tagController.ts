@@ -35,7 +35,7 @@ export async function getDefaultTags (req : Request & IExtReq, res : Response) {
             }
         ]);
 
-        if (!tags || tags.length === 0) return res.status(404).json({ message: 'Tags not found'});
+        if (!tags || tags.length === 0) return res.status(404).json({ message: 'Tags not found' });
 
         return res.status(200).json(tags);
     } catch (error : any) {

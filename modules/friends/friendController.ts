@@ -243,7 +243,7 @@ export async function showFriend(req: Request & IExtReq, res: Response) {
         // formate result with friend data and calculated daysUntilBirthday
         const result: IFriendResult = {
             ...friend.toJSON(),
-            daysUntilBirthday: daysUntilBirthday(friend!.dob, timezone),
+            daysUntilBirthday: daysUntilBirthday(friend!.dob, timezone as string),
         };
 
         return res.status(200).json(result);
@@ -260,25 +260,26 @@ export async function deleteFriend(req: Request & IExtReq, res: Response) {
         const friend = await Friend.findById(req.params.id);
         if (!friend) return res.status(404).json({ message: 'Friend not found' });
 
-        if (friend?.user.toString() === req.user?.toString()) { // verifies that friend is associated with logged in user
+        if (friend?.user.equals(req.user)) { // verifies that friend is associated with logged in user
             const session = await mongoose.startSession(); // start mongoose session transaction
             session.startTransaction();
 
             try {
                 // delete reminders associated with friend
-                await Reminder.deleteMany({ friend: friend._id }).session(session);
+                await Reminder.deleteMany({ friend: friend._id }, { session });
 
                 // delete gift recommendations associated with friend
-                await GiftRecommendation.deleteMany({ friend: friend._id }).session(session);
+                await GiftRecommendation.deleteMany({ friend: friend._id }, { session });
 
                 // finally, delete the friend
-                const result = await Friend.findByIdAndDelete(req.params.id).session(session);
+                const result = await Friend.findByIdAndDelete(req.params.id, { session });
 
                 if (result) { // if all operations are successful...
                     await session.commitTransaction(); // commit transaction
                     session.endSession();
                     return res.status(200).json({ message: 'Friend deleted successfully' });
                 }
+
             } catch (sessionError : any) {
                 // if any error during transaction...
                 await session.abortTransaction(); // abort
@@ -302,7 +303,7 @@ export async function updateFriend(req: Request & IExtReq, res: Response) {
         const friend = await Friend.findById(req.params.id);
         if (!friend) return res.status(404).json({ message: 'Friend not found' });
 
-        if (friend?.user.toString() === req.user?.toString()) { // Verify that friend is associated with the logged in user
+        if (friend?.user.equals(req.user!)) { // Verify that friend is associated with the logged in user
 
             const updateFields = {
                 ...req.body
@@ -327,7 +328,7 @@ export async function updateTags (req : Request & IExtReq, res : Response) {
     try {
         const friend = await Friend.findById(req.params.id);
         if (!friend) throw { status: 404, message: 'Friend not found' };
-        if (friend?.user.toString() !== req.user?.toString()) throw { status: 403, message: 'User not authorized for this request' }
+        if (!friend?.user.equals(req.user!)) throw { status: 403, message: 'User not authorized for this request' }
 
         const tags = req.body;
 
@@ -371,7 +372,7 @@ export async function uploadFriendPhoto(req: Request & IExtReq, res: Response) {
         const fileData = file.data
         const friend = await Friend.findById(req.params.id);
         if(!friend) return res.status(404).json({message: "Friend not found"});
-        if (friend?.user.toString() !== req.user?.toString()) return res.status(403).json({message: "User not authorized for this request" });
+        if (friend?.user.equals(req.user!)) return res.status(403).json({message: "User not authorized for this request" });
         const fileName = `${req.params.id}.${fileType}`
     
         const bucketParams = {

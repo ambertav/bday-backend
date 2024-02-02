@@ -7,8 +7,10 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import Friend from "./models/friend";
 import User from '../user/models/user';
 import Tag from '../tags/models/tag';
-const app = configureApp([bearer]);
+import Reminder from '../notifications/models/reminder';
+import GiftRecommendation from '../recommendation/models/giftRecommendation';
 
+const app = configureApp([bearer]);
 
 declare global {
     var __MONGO_URI__: string;
@@ -21,7 +23,12 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-    await mongoose.connection.close();
+    try {
+        await Friend.deleteMany({});
+        await User.deleteMany({});
+    } finally {
+        await mongoose.connection.close();
+    }
 });
 
 let token: string;
@@ -31,29 +38,36 @@ let user: JwtPayload;
 let otherUser: JwtPayload;
 
 beforeAll(async () => {
+
+    // manually create two users and with verified emails
+    await User.create({
+        email: "test@email.com",
+        passwordHash: "123456Aa!",
+        verified: true,
+    });
+
+    await User.create({
+        email: "testing@email.com",
+        passwordHash: "123456Aa!",
+        verified: true,
+    });
+
+    // log each user in and save the corresponding token
     const userResponse = await request(app)
-        .post('/api/users/')
+        .post('/api/users/login')
         .send({
             email: "test@email.com",
             password: "123456Aa!",
-            name: "test",
-            dob: "1990-08-08",
-            gender: "female",
-            lastName: "user"
         });
 
     token = userResponse.body.accessToken;
     user = jwt.decode(token) as JwtPayload;
 
     const otherUserResponse = await request(app)
-        .post('/api/users/')
+        .post('/api/users/login')
         .send({
-            email: "testingt@email.com",
+            email: "testing@email.com",
             password: "123456Aa!",
-            name: "test",
-            lastName: "user",
-            dob: "1990-08-08",
-            gender: "female",
         });
 
     otherToken = otherUserResponse.body.accessToken;
@@ -62,16 +76,14 @@ beforeAll(async () => {
 
 describe('POST /api/friends/create', () => {
     it('should create a new friend', async () => {
-
         const requestBody = {
             name: 'test',
+            gender: 'female',
             dob: '1997-01-26',
             photo: 'string',
-            bio: 'a test user',
-            interests: ['testing', 'this is a test'],
             tags: [],
+            favoriteGifts: [],
             user: user.payload,
-            gender: 'female'
         }
 
         const response = await request(app)
@@ -81,6 +93,7 @@ describe('POST /api/friends/create', () => {
 
         expect(response.statusCode).toBe(201);
         expect(response.body).toHaveProperty('_id');
+        expect(response.body.name).toEqual(requestBody.name);
     });
 });
 
@@ -92,37 +105,50 @@ describe('GET /api/friends/', () => {
                 name: 'test',
                 dob: '1997-01-26',
                 photo: 'string',
-                bio: 'a test user',
-                interests: ['testing', 'this is a test'],
                 tags: [],
+                favoriteGifts: [],
                 user: otherUser.payload,
                 gender: 'female'
             }
 
-            // Create test friends
+            // create test friends
             const friend1 = await Friend.create(friendData);
             const friend2 = await Friend.create(friendData);
 
             const response = await request(app)
                 .get('/api/friends/')
-                .set('Authorization', `Bearer ${otherToken}`);
+                .set('Authorization', `Bearer ${otherToken}`)
+                .expect(200);
 
-            // Should return all friends
-            expect(response.statusCode).toBe(200);
-            expect(response.body).toHaveLength(2);
+            // should return in particular strucutre
+            expect(response.body).toEqual(expect.objectContaining({
+                today: expect.any(Array),
+                thisWeek: expect.any(Array),
+                thisMonth: expect.any(Array),
+                laterOn: expect.any(Array),
+            }));
 
-            // Clean up created friends
+            // flatten strucutre and verify that response returns all friends
+            const allFriends = [
+                ...response.body.laterOn,
+                ...response.body.thisMonth,
+                ...response.body.thisWeek,
+                ...response.body.today
+            ];
+            expect(allFriends).toHaveLength(2);
+
+            // clean up created friends
             await Friend.deleteMany({ user: otherUser.payload });
         });
 
-        it('should return an empty response if there are no friends', async () => {
-            const emptyResponse = await request(app)
+        it('should return an message response if there are no friends', async () => {
+            const noFriendsResponse = await request(app)
                 .get('/api/friends/')
-                .set('Authorization', `Bearer ${otherToken}`);
+                .set('Authorization', `Bearer ${otherToken}`)
+                .expect(200);
 
-            // // Should return an empty response if no friends
-            // expect(emptyResponse.statusCode).toBe(204);
-            // expect(emptyResponse.body).toEqual({});
+            // Should return an message response if no friends
+            expect(noFriendsResponse.body.message).toEqual('No friends found');
         });
     });
 });
@@ -132,69 +158,109 @@ describe('GET /api/friends/:id', () => {
 
         const requestBody = {
             name: 'test',
+            gender: 'female',
             dob: '1997-01-26',
             photo: 'string',
-            bio: 'a test user',
-            interests: ['testing', 'this is a test'],
             tags: [],
+            favoriteGifts: [],
             user: user.payload,
-            gender: 'female'
         }
 
         const friend3 = await Friend.create(requestBody);
 
         const response = await request(app)
             .get(`/api/friends/${friend3._id}`)
-            .set('Authorization', `Bearer ${token}`);
-
-        expect(response.statusCode).toBe(200);
+            .set('Authorization', `Bearer ${token}`)
+            .expect(200);
 
         // if request is made by another user, the friend is not found
         const response2 = await request(app)
             .get(`/api/friends/${friend3._id}`)
-            .set('Authorization', `Bearer ${otherToken}`);
-
-        expect(response2.statusCode).toBe(404);
+            .set('Authorization', `Bearer ${otherToken}`)
+            .expect(404);
 
     });
 });
 
 describe('DELETE /api/friends/:id/delete', () => {
-    it('should delete a user\'s friend only if the friend belongs to user and is found', async () => {
 
+    // initalizing variables for ids
+    let friendId = '';
+    let reminderId = '';
+    let giftId = '';
+
+    beforeAll(async () => {
         const friendData = {
             name: 'test',
+            gender: 'female',
             dob: '1997-01-26',
             photo: 'string',
-            bio: 'a test user',
-            interests: ['testing', 'this is a test'],
             tags: [],
+            favoriteGifts: [],
             user: user.payload,
-            gender: 'female'
         }
-
+    
+        // create friend
         const friend = await Friend.create(friendData);
+        friendId = friend._id;
+    
+        // create reminder associated to friend
+        const testReminder = await Reminder.create({
+            type: 0,
+            user: user.payload,
+            friend: friend._id
+        });
+        reminderId = testReminder._id;
+    
+        // create gift associated to friend
+        const testGift = await GiftRecommendation.create({
+            title: 'test',
+            image: 'photo',
+            reason: 'this is a test',
+            imageSearchQuery: 'photo',
+            giftType: 'present',
+            estimatedCost: '50',
+            friend: friend._id
+        });
+        giftId = testGift._id.toString();
 
+    });
+
+    it('should delete a user\'s friend only if the friend belongs to user and is found', async () => {
+
+        // expect 403 forbidden for requests made to delete other user's friends
         const response = await request(app)
-            .delete(`/api/friends/${friend._id}/delete`)
-            .set('Authorization', `Bearer ${otherToken}`);
+            .delete(`/api/friends/${friendId}/delete`)
+            .set('Authorization', `Bearer ${otherToken}`)
+            .expect(403);
 
-        expect(response.statusCode).toBe(403);
-
+        // expect 200 success for requests made to delete own friends
         const response2 = await request(app)
-            .delete(`/api/friends/${friend._id}/delete`)
-            .set('Authorization', `Bearer ${token}`);
+            .delete(`/api/friends/${friendId}/delete`)
+            .set('Authorization', `Bearer ${token}`)
+            .expect(200);
 
-        expect(response2.statusCode).toBe(200);
-
-        const deletedFriend = await Friend.findById(friend._id);
+        // verify that friend was deleted in db
+        const deletedFriend = await Friend.findById(friendId);
         expect(deletedFriend).toBeNull();
 
+        // expect 404 not found for requests made to delete friends that don't exist
         const response3 = await request(app)
-            .delete(`/api/friends/${friend._id}/delete`)
-            .set('Authorization', `Bearer ${token}`);
+            .delete(`/api/friends/${friendId}/delete`)
+            .set('Authorization', `Bearer ${token}`)
+            .expect(404);
 
-        expect(response3.statusCode).toBe(404);
+    });
+
+    it('should delete any documents related to deleted friend', async () => {
+        // verify that associated reminders were deleted
+        const deletedReminder = await Reminder.findById(reminderId);
+        expect(deletedReminder).toBeNull();
+
+        // verify that associated gifts were deleted
+        const deletedGift = await GiftRecommendation.findById(giftId);
+        expect(deletedGift).toBeNull();
+        
     });
 });
 
@@ -203,13 +269,12 @@ describe('PUT /api/friends/:id/update', () => {
     it('should update a user\'s friend', async () => {
         const friendData = {
             name: 'test',
+            gender: 'female',
             dob: '1997-01-26',
             photo: 'string',
-            bio: 'a test user',
-            interests: ['testing', 'this is a test'],
             tags: [],
+            favoriteGifts: [],
             user: user.payload,
-            gender: 'female'
         }
 
         const testTag = await Tag.create({
@@ -220,11 +285,6 @@ describe('PUT /api/friends/:id/update', () => {
         const updateString = {
             ...friendData,
             name: 'testing'
-        }
-
-        const updateInterests = {
-            ...friendData,
-            interests: ['just a test']
         }
 
         const updateTags = {
@@ -238,31 +298,18 @@ describe('PUT /api/friends/:id/update', () => {
         const stringResponse = await request(app)
             .put(`/api/friends/${friend._id}/update`)
             .send(updateString)
-            .set('Authorization', `Bearer ${token}`);
-
-        expect(stringResponse.statusCode).toBe(200);
+            .set('Authorization', `Bearer ${token}`)
+            .expect(200);
 
         const updatedFriend = await Friend.findById(friend._id);
         expect(updatedFriend?.name).toEqual(updateString.name);
-
-        // tests if the interests array field will be updated
-        const interestsResponse = await request(app)
-            .put(`/api/friends/${friend._id}/update`)
-            .send(updateInterests)
-            .set('Authorization', `Bearer ${token}`);
-
-        expect(interestsResponse.statusCode).toBe(200);
-
-        const updatedInterestsFriend = await Friend.findById(friend._id);
-        expect(updatedInterestsFriend?.interests).toEqual(updateInterests.interests);
 
         // tests if the tag array of ObjectIds will be updated
         const tagsResponse = await request(app)
             .put(`/api/friends/${friend._id}/update`)
             .send(updateTags)
-            .set('Authorization', `Bearer ${token}`);
-
-        expect(tagsResponse.statusCode).toBe(200);
+            .set('Authorization', `Bearer ${token}`)
+            .expect(200);
 
         const updatedTagsFriend = await Friend.findById(friend._id);
         expect(updatedTagsFriend?.tags).toEqual(updateTags.tags);
@@ -270,206 +317,74 @@ describe('PUT /api/friends/:id/update', () => {
 });
 
 describe("POST /api/friends/:id/tags", () => {
-    it("should add an existing tag to friend", async () => {
-        const friendData = {
-            name: 'test',
-            dob: '1997-01-26',
-            photo: 'string',
-            bio: 'a test user',
-            interests: ['testing', 'this is a test'],
-            tags: [],
-            user: user.payload,
-            gender: 'female'
-        }
-        const friend = await Friend.create(friendData);
-        const friendId = friend._id.toString();
 
-        const tagData = { title: "existingTag", type: "custom" };
-        const existingTag = await Tag.create(tagData);
-        const existingTagId = existingTag._id.toString();
-        const response = await request(app)
-            .post(`/api/friends/${friendId}/tags`)
-            .send({ title: "existingTag", type: "custom" })
-            .set('Authorization', `Bearer ${token}`)
-            .expect(200);
+    // initialize variables for ids
+    let friendId = '';
 
-        expect(response.body._id).toBe(existingTagId);
-    });
-    it("should create and add a non-existing tag to friend", async () => {
+    beforeAll(async () => {
+        // clear out tag collection
         await Tag.deleteMany({});
-        await Friend.deleteMany({});
+
+        // create friend
         const friendData = {
             name: 'test',
+            gender: 'female',
             dob: '1997-01-26',
             photo: 'string',
-            bio: 'a test user',
-            interests: ['testing', 'this is a test'],
             tags: [],
+            favoriteGifts: [],
             user: user.payload,
-            gender: 'female'
         }
+        
         const friend = await Friend.create(friendData);
-        const friendId = friend._id.toString();
-        expect(friend.tags.length).toEqual(0);
+        friendId = friend._id.toString();
+    });
+    
+    it("should associate tags, new and existing, to friend", async () => {
+
+        // create tag
+        const existingTag = await Tag.create({ 
+            title: "existingTag",
+            type: "custom"
+        });
+
+        // initialize request body with existingTag, and a title for new tag
+        const requestBody = [existingTag, 'newTag'];
+
+        // expect 200
         const response = await request(app)
             .post(`/api/friends/${friendId}/tags`)
-            .send({ title: "newTag", type: "custom" })
-            .set('Authorization', `Bearer ${token}`)
-            .expect(201);
-
-        expect(response.body._id).toBeDefined();
-        const retrievedFriend = await Friend.findById(friendId);
-        expect(retrievedFriend?.tags.length).toBeGreaterThan(0);
-    });
-    it("should not add the same tag twice to friend", async () => {
-        const friend = await Friend.findOne({}).populate("tags");
-        const tagCount = friend?.tags.length;
-        expect(tagCount).toBeGreaterThan(0);
-        const tag = await Tag.findById(friend?.tags[0]);
-        expect(tag).not.toBeNull();
-        const response = await request(app)
-            .post(`/api/friends/${friend?._id}/tags`)
-            .send({ title: tag?.title, type: tag?.type })
-            .set('Authorization', `Bearer ${token}`)
-            .expect(200);
-        const retrievedFriend = await Friend.findById(friend?._id);
-        expect(retrievedFriend?.tags.length).toEqual(tagCount);
-    });
-});
-
-describe("DELETE /api/friends/:id/tags/:tagId", () => {
-    it("should remove an existing tag from friend", async () => {
-        const friend = await Friend.findOne({}).populate("tags");
-        const tag = await Tag.findById(friend?.tags[0]);
-        const tagCount = friend?.tags.length;
-
-        const response = await request(app)
-            .delete(`/api/friends/${friend?._id}/tags/${tag?._id}`)
+            .send(requestBody)
             .set('Authorization', `Bearer ${token}`)
             .expect(200);
 
-        expect(response.body.message).toBe("Tag removed");
-        const retrievedFriend = await Friend.findById(friend?._id).populate("tags");
-        expect(retrievedFriend?.tags.length).toEqual(tagCount! - 1);
+        // ensuring that tag was created with the string passed 
+        const createdTag = await Tag.findOne({ title: 'newTag' });
+        expect(createdTag).toBeDefined();
+
+        const friend = await Friend.findById(friendId);
+
+        // ensuring that friend.tags has both tags
+        expect(friend?.tags.length).toEqual(2);
+        expect(friend?.tags).toContainEqual(existingTag._id);
+        expect(friend?.tags).toContainEqual(createdTag?._id);
     });
 
-    it("should not throw an error if the tag does not exist on friend", async () => {
-        const friend = await Friend.findOne({});  // Pick any friend
-
-        // Create a tag that's not associated with the friend
-        const tagData = { title: "unassociatedTag", type: "custom" };
-        const unassociatedTag = await Tag.create(tagData);
-        const unassociatedTagId = unassociatedTag._id.toString();
-
+    it("should remove associated tags from friend", async () => {
+        // request with empty body, expect 200
         const response = await request(app)
-            .delete(`/api/friends/${friend?._id}/tags/${unassociatedTagId}`)
+            .post(`/api/friends/${friendId}/tags`)
+            .send([])
             .set('Authorization', `Bearer ${token}`)
             .expect(200);
-    });
 
-    it("should not remove tag from a different user's friend", async () => {
-        // Create a friend belonging to otherUser
-        const otherFriendData = {
-            name: 'test',
-            dob: '1997-01-26',
-            photo: 'string',
-            bio: 'a test user',
-            interests: ['testing', 'this is a test'],
-            tags: [],
-            user: otherUser.payload,
-            gender: 'female'
-        };
-        const otherFriend = await Friend.create(otherFriendData);
+        // ensuring that associated tags was removed
+        const friend = await Friend.findById(friendId);
+        expect(friend?.tags.length).toEqual(0);
 
-        const tag = await Tag.findOne({}); // Any tag that exists in the DB
-
-        const response = await request(app)
-            .delete(`/api/friends/${otherFriend._id}/tags/${tag?._id}`)
-            .set('Authorization', `Bearer ${token}`) // This should be first user's token
-            .expect(403); // Forbidden
-
-        expect(response.body.message).toBe("User not authorized for this request");
-    });
-});
-
-describe("POST /api/friends/:id/preferences", () => {
-    it("should add a preference and return friend object", async () => {
-        await Friend.deleteMany({});
-        const friend = await Friend.create({
-            name: 'test',
-            dob: '1997-01-26',
-            photo: 'string',
-            bio: 'a test user',
-            user: user.payload,
-            gender: 'female',
-        });
-        const response = await request(app)
-            .post(`/api/friends/${friend._id}/preferences`)
-            .set('Authorization', `Bearer ${token}`)
-            .send({ preference: "present" })
-            .expect(200);
-        expect(response.body.friend).toBeDefined();
-        expect(response.body.friend.giftPreferences.length).toBeGreaterThan(0);
-    });
-
-    it("should throw an error if preference is not known", async () => {
-        await Friend.deleteMany({});
-        const friend = await Friend.create({
-            name: 'test',
-            dob: '1997-01-26',
-            photo: 'string',
-            bio: 'a test user',
-            user: user.payload,
-            gender: 'female',
-        });
-        const response = await request(app)
-            .post(`/api/friends/${friend._id}/preferences`)
-            .set('Authorization', `Bearer ${token}`)
-            .send({ preference: "unknownPreference" })
-            .expect(500);
-    });
-
-});
-
-describe("POST /api/friends/:id/preferences/remove", () => {
-    it("should remove an existing preference and return friend object", async () => {
-        await Friend.deleteMany({});
-        const friend = await Friend.create({
-            name: 'test',
-            dob: '1997-01-26',
-            photo: 'string',
-            bio: 'a test user',
-            giftPreferences: ["present", "experience"],
-            user: user.payload,
-            gender: 'female',
-        });
-        const response = await request(app)
-            .post(`/api/friends/${friend._id}/preferences/remove`)
-            .set('Authorization', `Bearer ${token}`)
-            .send({ preference: "present" })
-            .expect(200);
-        expect(response.body.friend).toBeDefined();
-        expect(response.body.friend.giftPreferences).not.toContain("present");
-    });
-
-    it("should not throw an error if a known preference is not contained in the array", async () => {
-        await Friend.deleteMany({});
-        const friend = await Friend.create({
-            name: 'test',
-            dob: '1997-01-26',
-            photo: 'string',
-            bio: 'a test user',
-            giftPreferences: ["experience"],
-            user: user.payload,
-            gender: 'female',
-        });
-        const response = await request(app)
-            .post(`/api/friends/${friend._id}/preferences/remove`)
-            .set('Authorization', `Bearer ${token}`)
-            .send({ preference: "present" })
-            .expect(200);
-        expect(response.body.friend).toBeDefined();
-        expect(response.body.friend.giftPreferences).not.toContain("present");
+        // ensuring that tags were not deleted from the collection
+        const count = await Tag.countDocuments();
+        expect(count).toEqual(2);
     });
 });
 
