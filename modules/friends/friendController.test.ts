@@ -388,6 +388,94 @@ describe("POST /api/friends/:id/tags", () => {
     });
 });
 
+describe('GET /api/friends/birthdays', () => {
+    it('should return object of date keys and arrays of friends with corresponding birthdays', async () => {
+        await Friend.deleteMany({});
+
+        const friendData1 = {
+            name: 'test',
+            gender: 'female',
+            dob: '1997-01-26',
+            photo: 'string',
+            tags: [],
+            favoriteGifts: [],
+            user: user.payload,
+        }
+        const dobKey1 = friendData1.dob.slice(5);
+        
+        const friendData2 = {
+            name: 'test',
+            gender: 'female',
+            dob: '1997-02-26',
+            photo: 'string',
+            tags: [],
+            favoriteGifts: [],
+            user: user.payload,
+        }
+        const dobKey2 = friendData2.dob.slice(5);
+
+        await Friend.insertMany([friendData1, friendData2]);
+
+        const friend1 = await Friend.findOne({ dob: new Date ('1997-01-26') });
+        const friend2 = await Friend.findOne({ dob: new Date ('1997-02-26') });
+
+        const response = await request(app)
+            .get('/api/friends/birthdays')
+            .set('Authorization', `Bearer ${token}`)
+            .expect(200);
+
+        expect(response.body).toMatchObject({
+            [dobKey1]: [{ 
+                _id: friend1!._id.toString(), 
+                dob: friend1!.dob.toISOString(), 
+                name: friend1!.name, 
+                photo: friend1!.photo 
+            }],
+            [dobKey2]: [{ 
+                _id: friend2!._id.toString(),
+                dob: friend2!.dob.toISOString(),
+                name: friend2!.name,
+                photo: friend2!.photo
+            }],
+        });
+            
+    });
+});
+
+describe('PUT /api/friends/update-notification-inclusion', () => {
+    it('should take array of friendIds and toggle includeInNotifications boolean value', async () => {
+        const friends = await Friend.find({ user: user.payload });
+
+        // ensuring intial value
+        expect(friends.map(f => f.includeInNotifications)).toContain(true);
+
+        // creating array of ids
+        const friendIds = friends.map(f => f._id);
+
+        // expect 200, send over friend id array
+        const response = await request(app)
+            .put('/api/friends/update-notification-inclusion')
+            .send({ friendIds })
+            .set('Authorization', `Bearer ${token}`)
+            .expect(200);
+        
+        // ensuring that includeInNotifications value was toggled to false
+        const updatedFriends = await Friend.find({ user: user.payload });
+        expect(updatedFriends.map(f => f.includeInNotifications)).toContain(false);
+
+        // send over friend id array again to make sure that toggle works both ways
+            await request(app)
+                .put('/api/friends/update-notification-inclusion')
+                .send({ friendIds })
+                .set('Authorization', `Bearer ${token}`)
+                .expect(200);
+
+        // ensuring that includeInNotifications value was toggled to true
+        const twiceUpdatedFriends = await Friend.find({ user: user.payload });
+        expect(twiceUpdatedFriends.map(f => f.includeInNotifications)).toContain(true);
+    });
+});
+
 // describe("POST /api/friends/:id/upload", () => {
 //     it("should upload a photo and return its url", async () => {
 //         await Friend.deleteMany({});
