@@ -7,15 +7,12 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import Friend from "../friends/models/friend";
 import User from '../user/models/user';
 import Tag from '../tags/models/tag';
-import giftRecommendation from './models/giftRecommendation';
+import GiftRecommendation from './models/giftRecommendation';
 
 
 let token: string;
 let user: JwtPayload;
 let friendId: string;
-let tag1Id: string;
-let tag2Id: string;
-let favId: string;
 
 const app = configureApp([bearer]);
 
@@ -27,111 +24,125 @@ beforeAll(async () => {
     await mongoose.connect(global.__MONGO_URI__);
     await Friend.deleteMany({});
     await User.deleteMany({});
+    await GiftRecommendation.deleteMany({});
     await Tag.deleteMany({});
 
+    // manually create user and with verified email
+    await User.create({
+        email: "test@email.com",
+        passwordHash: "123456Aa!",
+        verified: true,
+    });
+
+    // log user in and save the corresponding token
     const userResponse = await request(app)
-        .post('/api/users/')
+        .post('/api/users/login')
         .send({
             email: "test@email.com",
             password: "123456Aa!",
-            name: "test",
-            dob: "1990-08-08",
-            gender: "female",
-            lastName: "user"
         });
 
     token = userResponse.body.accessToken;
     user = jwt.decode(token) as JwtPayload;
 
-    const tagData1 = { title: "family", type: "custom" };
-    const tag1 = await Tag.create(tagData1);
-    tag1Id = tag1._id;
+    const tags = await Tag.insertMany([
+        { title: 'family', type: 'custom' },
+        { title: 'gamer', type: 'custom' }
+    ]);
 
-    const tagData2 = { title: "gamer", type: "custom" };
-    const tag2 = await Tag.create(tagData2);
-    tag2Id = tag2._id;
-
-    const friendData = {
+    const friend = await Friend.create({
         name: 'test',
         gender: 'female',
         dob: '1997-01-26',
         photo: 'string',
-        bio: 'a test user',
-        interests: ['testing', 'this is a test'],
-        tags: [tag1Id, tag2Id],
+        tags: [tags[0]._id, tags[1]._id],
+        favoriteGifts: [],
         user: user.payload
-    }
+    });
 
-    const friend = await Friend.create(friendData);
     friendId = friend._id.toString();
 
 });
 
 afterAll(async () => {
-    await mongoose.connection.close();
+    try {
+        await GiftRecommendation.deleteMany({});
+        await Tag.deleteMany({});
+        await Friend.deleteMany({});
+        await User.deleteMany({});
+    } finally {
+        await mongoose.connection.close();
+    }
 });
 
 
-// describe('openai call for gift recommendations', () => {
-//     it('should return a json of gift recommendations', async () => {
-
-//         const req = {
-//             tags: ['family', 'gamer'],
-//             giftTypes: ['present', 'experience', 'donation'],
-//             budget: 50
-//         }
+// describe('POST /api/friends/:id/generate-gift', () => {
+//     it('should return a json of gift recommendations from openai call', async () => {
 
 //         const response = await request(app)
 //             .post(`/api/friends/${friendId}/generate-gift`)
-//             .send(req)
+//             .send({
+//                 tags: ['family', 'gamer'],
+//                 giftTypes: ['present', 'experience', 'donation'],
+//                 budget: 50
+//             })
 //             .set('Authorization', `Bearer ${token}`)
+//             .expect(200);
 
-//         expect(response.status).toBe(200);
 //         expect(response.body.recommendations).toBeDefined();
 
 //     }, 30000);
 // });
 
-describe("gift recommendation controller", () => {
-    it("should return an empty object if no favorite gifts", async () => {
-        const response = await request(app)
-            .get(`/api/friends/${friendId}/favorites`)
-            .set('Authorization', `Bearer ${token}`)
-            .expect(200);
-    });
-    it("should save a favorite gift", async () => {
-        const req = {
-            title: "Live monkey",
-            reason: "Your friend looks like a monkey",
-            imageSearchQuery: "live monkey",
-            imgSrc: "https://placeholder.com/monkey.png"
-        };
+
+describe('POST /api/friends/:id/favorites', () => {
+    it('should add a gift recommendation to friend\'s favorite gifts', async () => {
+
         const response = await request(app)
             .post(`/api/friends/${friendId}/favorites`)
             .set('Authorization', `Bearer ${token}`)
-            .send(req)
+            .send({
+                title: "Live monkey",
+                reason: "Your friend looks like a monkey",
+                imageSearchQuery: "live monkey",
+                imgSrc: "https://placeholder.com/monkey.png",
+                giftType: 'present',
+                estimatedCost: '50'
+            })
             .expect(201);
+
+        // checking return of created gift recommendation
         expect(response.body.recommendation).toBeDefined();
+        
+        // query database and ensure that it was created
+        const gift = await GiftRecommendation.findById(response.body.recommendation._id);
+        expect(gift).toBeDefined();
+
+        const friend = await Friend.findById(friendId);
+        // ensuring that gift recommendation was associated
+        expect(friend?.favoriteGifts.length).toBe(1);
+        expect(friend?.favoriteGifts).toContainEqual(gift?._id);
     });
-    it("should return a list of favorite recommendations", async () => {
+});
+
+describe('DELETE /api/friends/:id/favorites/:favoriteId', () => {
+    it("should delete a favorited gift from collection and unassociate from friend", async () => {
+        // find existing favorite gift
+        const favorite = await GiftRecommendation.findOne({ friend: friendId });
+
         const response = await request(app)
-            .get(`/api/friends/${friendId}/favorites`)
+            .delete(`/api/friends/${friendId}/favorites/${favorite?._id}`)
             .set('Authorization', `Bearer ${token}`)
             .expect(200);
-        expect(response.body.favorites).toBeDefined();
-        expect(response.body.favorites.length).toBeGreaterThan(0);
-        favId = response.body.favorites[0]._id;
-    });
-    it("should delete a favorited gift", async () => {
-        const response = await request(app)
-            .delete(`/api/friends/${friendId}/favorites/${favId}`)
-            .set('Authorization', `Bearer ${token}`)
-            .expect(200);
+
         expect(response.body.message).toBe("Favorite gift removed");
 
-        await request(app)
-            .get(`/api/friends/${friendId}/favorites`)
-            .set('Authorization', `Bearer ${token}`)
-            .expect(200);
+        // ensuring that favorite was deleted from database
+        const deletedFavorite = await GiftRecommendation.findById(favorite?._id);
+        expect(deletedFavorite).toBeNull();
+
+        const friend = await Friend.findById(friendId);
+        // ensuring that gift recommendation was unassociated
+        expect(friend?.favoriteGifts.length).toBe(0);
     });
 });
