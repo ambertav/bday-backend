@@ -447,7 +447,7 @@ describe('PUT /api/friends/update-notification-inclusion', () => {
         const friends = await Friend.find({ user: user.payload });
 
         // ensuring intial value
-        expect(friends.map(f => f.includeInNotifications)).toContain(true);
+        expect(friends.every(f => f.includeInNotifications === true)).toBe(true);
 
         // creating array of ids
         const friendIds = friends.map(f => f._id);
@@ -461,7 +461,7 @@ describe('PUT /api/friends/update-notification-inclusion', () => {
         
         // ensuring that includeInNotifications value was toggled to false
         const updatedFriends = await Friend.find({ user: user.payload });
-        expect(updatedFriends.map(f => f.includeInNotifications)).toContain(false);
+        expect(updatedFriends.every(f => f.includeInNotifications === false)).toBe(true);
 
         // send over friend id array again to make sure that toggle works both ways
             await request(app)
@@ -472,7 +472,7 @@ describe('PUT /api/friends/update-notification-inclusion', () => {
 
         // ensuring that includeInNotifications value was toggled to true
         const twiceUpdatedFriends = await Friend.find({ user: user.payload });
-        expect(twiceUpdatedFriends.map(f => f.includeInNotifications)).toContain(true);
+        expect(twiceUpdatedFriends.every(f => f.includeInNotifications === true)).toBe(true);
     });
 });
 
