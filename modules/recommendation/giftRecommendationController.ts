@@ -39,7 +39,7 @@ export async function recommendGift(req: Request & IExtReq, res: Response) {
         if (rateLimiterOpenAI.isRateLimited('limit reached')) return res.status(429).json({ message: 'Limit reached, try again later' });
         const friend = await Friend.findById(req.params.id)
         if (!friend) throw { status: 404, message: "Friend not found" };
-        if (friend?.user.toString() !== req.user?.toString()) throw { status: 403, message: "User not authorized for this request" }
+        if (!friend?.user.equals(req.user!)) throw { status: 403, message: "User not authorized for this request" }
 
         const now = new Date();
         const year = now.getFullYear();
@@ -93,7 +93,7 @@ export async function favoriteGift(req: Request & IExtReq, res: Response) {
         const friendId = req.params.id;
         const friend = await Friend.findById(friendId);
         if (!friend) throw { status: 404, message: "Friend not found" };
-        if (friend?.user.toString() !== req.user?.toString()) throw { status: 403, message: "User not authorized for this request" }
+        if (!friend?.user.equals(req.user!)) throw { status: 403, message: "User not authorized for this request" }
         if (!title || !reason || !imgSrc || !imageSearchQuery || !giftType || !estimatedCost) throw { status: 400, message: "Missing information" };
         // provide as array to fix typing issue
         const recommendation = await GiftRecommendation.create([{
@@ -132,7 +132,7 @@ export async function removeFavorite(req: Request & IExtReq, res: Response) {
 
         const friend = await Friend.findById(friendId).session(session);
         if (!friend) throw { status: 404, message: "Friend not found" };
-        if (friend?.user.toString() !== req.user?.toString()) throw { status: 403, message: "User not authorized for this request" };
+        if (!friend?.user.equals(req.user!)) throw { status: 403, message: "User not authorized for this request" };
 
         const favoriteIndex = friend.favoriteGifts.indexOf(new mongoose.Types.ObjectId(favoriteId));
         if (favoriteIndex === -1) throw { status: 404, message: "Favorite gift not found in friend's favorites" };
