@@ -19,6 +19,7 @@ declare global {
 
 // Test variables
 let token : string;
+let refreshToken : string;
 let sentMailData : string;
 let temporaryEmail : string;
 
@@ -46,7 +47,7 @@ beforeAll(async () => {
 
     // temporaryEmail = await generateTemporaryEmail();
 
-    temporaryEmail = 'naneli4286@laymro.com' // manually add temp for now
+    temporaryEmail = '' // manually add temp for now
 });
 
 afterAll(async () => {
@@ -125,7 +126,7 @@ describe('POST /api/users/login/', () => {
     });
     
     it('should reject login of an user with invalid password', async () => {
-        
+
         // invalid user, expect 401
         const response = await request(app)
         //@ts-ignore
@@ -145,7 +146,7 @@ describe('POST /api/users/login/', () => {
         // manually verify email
         const user = await User.findOne({ email: temporaryEmail });
         user!.verified = true;
-        await user?.save();
+        await user!.save();
 
         // expect 200 OK on login
         const response = await request(app)
@@ -165,26 +166,61 @@ describe('POST /api/users/login/', () => {
         const setCookieHeader = response.headers['set-cookie'];
         expect(setCookieHeader).toBeDefined();
         expect(setCookieHeader).toHaveLength(1); 
-        expect(setCookieHeader[0]).toMatch(/HttpOnly/i); 
+        expect(setCookieHeader[0]).toMatch(/HttpOnly/i);
+
+        // extract the refreshToken for future use
+        const regexMatches = setCookieHeader[0].match(/jwt=([^;]+)/);
+        refreshToken = regexMatches[1];
     });
 });
 
+describe('POST /api/users/verify-email/', () => {
+    it('should verify the user\'s email', async () => {
 
-// describe('POST /api/users/verify-email/', () => {
+        // reset manually verification, and ensure that it is false
+        const user = await User.findOne({ email: temporaryEmail });
+        user!.verified = false;
+        await user!.save();
 
-// });
+        expect(user?.verified).toEqual(false);
 
-// describe('POST /api/users/resend-email/', () => {
+        // get email token from email manually for now
+        const emailToken : string = encodeURIComponent('');
 
-// });
+        const response = await request(app)
+            //@ts-ignore
+            .post('/api/users/verify-email')
+            .send({ token: emailToken })
+            .expect(200);
+   
+        // ensuring that verification worked
+        expect(response.body.message).toBe('User\'s email was verified successfully');
+        const verifiedUser = await User.findById(user!._id);
+        expect(verifiedUser?.verified).toEqual(true);
+    });
+});
 
-// describe('POST /api/users/refresh/', () => {
+describe('POST /api/users/refresh/', () => {
+    it('should send over a new accessToken and refresh token', async () => {
 
-// });
+        // expect 200 OK, send over both tokens
+        const response = await request(app)
+            .post('/api/users/refresh')
+            .send({ device: 'web' })
+            .set('Authorization', `Bearer ${token}`)
+            .set('Cookie', `jwt=${refreshToken}`)
+            .expect(200);
 
-// describe('GET /api/users/logout/', () => {
+        // ensuring accessToken was sent in body
+        expect(response.body.accessToken).toBeDefined();
 
-// });
+        // and refreshToken was set to cookies, httpOnly
+        const setCookieHeader = response.headers['set-cookie'];
+        expect(setCookieHeader).toBeDefined();
+        expect(setCookieHeader).toHaveLength(1); 
+        expect(setCookieHeader[0]).toMatch(/HttpOnly/i); 
+    })
+});
 
 // describe('PUT /api/users/password/', () => {
 //     // Test updating password
@@ -278,6 +314,10 @@ describe('POST /api/users/login/', () => {
 //         profiles = await UserProfile.find({});
 //         expect(profiles.length).toEqual(0);
 //     });
+// });
+
+// describe('GET /api/users/logout/', () => {
+    
 // });
 
 // describe('POST /api/users/forgot-password', () => {
