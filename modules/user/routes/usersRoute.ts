@@ -10,7 +10,6 @@ router.post("/mobile/login", usersCtrl.mobileLogin);
 router.post("/refresh", usersCtrl.refresh);
 router.get("/logout", usersCtrl.logout);
 router.put("/password", requireLogin, usersCtrl.updatePassword);
-router.put("/", requireLogin, usersCtrl.updateUserDetails);
 router.delete("/", requireLogin, usersCtrl.deleteUser);
 router.post("/confirm-delete", requireLogin, usersCtrl.confirmDeleteUser);
 router.post('/verify-email', usersCtrl.verifyEmail);
