@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { IChangePasswordRequest, IExtReq, ILoginRequest, ISignupRequest } from "../../../interfaces/auth";
 import User, { IUserDocument } from "../models/user";
 import VerificationToken from "../models/verificationToken";
-import { IUserDetails } from "../../../interfaces/user";
 import userProfile from "../../profile/models/userProfile";
 import jwt, { JwtPayload, Secret } from 'jsonwebtoken';
 import { HTTPError, handleError, sendError } from "../../../utilities/utils";
@@ -157,7 +156,7 @@ export async function logout (req : Request & IExtReq, res : Response) {
     // clear the cookie
     res.clearCookie('jwt', {  httpOnly: true, secure: true, sameSite: 'none' });
 
-    res.status(200).json({ message: 'Cookie cleared' });
+    return res.status(200).json({ message: 'Cookie cleared' });
 }
 
 
@@ -187,7 +186,7 @@ export async function updatePassword(req: Request & IExtReq, res: Response) {
             throw { status: 400, message: `Save failed: ${err.message}` };
         }
 
-        res.status(200).json({ message: "Password changed" });
+        return res.status(200).json({ message: "Password changed" });
 
     } catch (error: any) {
         if ('status' in error && 'message' in error) {
@@ -198,38 +197,14 @@ export async function updatePassword(req: Request & IExtReq, res: Response) {
     }
 }
 
-export async function updateUserDetails(req: Request & IExtReq, res: Response) {
-    const details: Partial<IUserDetails> = req.body;
-    const allowedKeys: (keyof IUserDetails)[] = ['name', 'dob', 'gender', 'tel'];
-
-    try {
-        const user = await User.findById(req.user);
-        if (!user) throw { status: 404, message: "User not found" };
-
-        for (let key of allowedKeys) {
-            if (details.hasOwnProperty(key)) {
-                (user as any)[key] = details[key];
-            }
-        }
-
-        await user.save();
-        res.status(200).json({ message: "User details updated" });
-    } catch (error: any) {
-        if ('status' in error && 'message' in error) {
-            sendError(res, error as HTTPError);
-        } else {
-            res.status(500).json({ message: "Internal server error" });
-        }
-    }
-}
-
 export async function deleteUser(req: Request & IExtReq, res: Response) {
     try {
         const user = await User.findById(req.user);
         if (!user) throw { status: 404, message: "User not found" };
         const confirmationToken = tokenService.createJwt(user._id, AUTH_JWT_SECRET, CONFIRM_DELETE_EXPIRE);
-        res.status(200).json({ confirmationToken });
+        return res.status(200).json({ confirmationToken });
     } catch (error: any) {
+        console.error(error);
         if ('status' in error && 'message' in error) {
             sendError(res, error as HTTPError);
         } else {
@@ -257,7 +232,7 @@ export async function confirmDeleteUser(req: Request & IExtReq, res: Response) {
         // TODO: Clean other records belonging to user, such as friends, profile, etc.
         await userProfile.deleteMany({ user: user._id });
 
-        res.status(200).json({ message: "User deleted" });
+        return res.status(200).json({ message: "User deleted" });
     } catch (error: any) {
         if ('status' in error && 'message' in error) {
             sendError(res, error as HTTPError);
