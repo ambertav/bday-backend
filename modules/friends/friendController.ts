@@ -372,7 +372,7 @@ export async function uploadFriendPhoto(req: Request & IExtReq, res: Response) {
         const fileData = file.data
         const friend = await Friend.findById(req.params.id);
         if(!friend) return res.status(404).json({message: "Friend not found"});
-        if (friend?.user.equals(req.user!)) return res.status(403).json({message: "User not authorized for this request" });
+        if (!friend?.user.equals(req.user!)) return res.status(403).json({message: "User not authorized for this request" });
         const fileName = `${req.params.id}.${fileType}`
     
         const bucketParams = {
@@ -381,7 +381,7 @@ export async function uploadFriendPhoto(req: Request & IExtReq, res: Response) {
             Body: fileData
         };
         const result = await s3Client.send(new PutObjectCommand(bucketParams));
-        const s3ProfilePhotoUrl = `${s3BaseUrl}${bucketParams.Bucket}/${fileName}`;
+        const s3ProfilePhotoUrl = `${s3BaseUrl}${fileName}`;
 
         try {
             friend.photo = s3ProfilePhotoUrl;
