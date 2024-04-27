@@ -51,7 +51,7 @@ export async function getUserProfile(req: Request & IExtReq, res: Response) {
 
         const expandedProfile = {
             ...profile.toJSON(),
-            daysUntilBirthday: daysUntilBirthday(profile.dob, profile.timezone)
+            daysUntilBirthday: daysUntilBirthday(profile.dob as Date, profile.timezone as string)
         }
 
         res.status(200).json({ profile: expandedProfile });
@@ -78,7 +78,7 @@ export async function uploadUserPhoto(req: Request & IExtReq, res: Response) {
 
     try {
         const result = await s3Client.send(new PutObjectCommand(bucketParams));
-        const s3ProfilePhotoUrl = `${s3BaseUrl}${bucketParams.Bucket}/${fileName}`;
+        const s3ProfilePhotoUrl = `${s3BaseUrl}${fileName}`;
 
         try {
             const profile = await UserProfile.findOne({ user: req.user });
@@ -109,7 +109,7 @@ export async function getCurrentUser(req: Request & IExtReq, res: Response) {
 
         const expandedProfile = {
             ...profile.toJSON(),
-            daysUntilBirthday: daysUntilBirthday(profile.dob, profile.timezone)
+            daysUntilBirthday: daysUntilBirthday(profile.dob as Date, profile.timezone as string)
         }
 
         res.status(200).json({ user, profile: expandedProfile });

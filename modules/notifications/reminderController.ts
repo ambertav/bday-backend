@@ -48,7 +48,7 @@ export async function getReminders (req : Request & IExtReq, res : Response) {
 
             // calculate daysUntilBirthday, sort into current and past notifications based on if read
             const { current, past } = reminders.reduce((result, n) => {
-                const days = daysFromBirthday(n.friend.dob, timezone!);
+                const days = daysFromBirthday(n.friend.dob, timezone! as string);
 
                 if (n.isRead === true) result.past.push({ ...n, friend: { ...n.friend, daysUntilBirthday: days }});
                 else if (n.isRead === false) result.current.push({ ...n, friend: { ...n.friend, daysUntilBirthday: days }});
